@@ -395,3 +395,121 @@ Validated Research Gap
 Opportunity Scoring
         ↓
 Hypothesis / Experiment Proposal
+
+---
+
+## 9. Definition of a Research Opportunity
+
+For DiscoveryAI, a **research opportunity** is an evidence-supported area where the available scientific literature indicates that additional research may be valuable because of one or more factors such as:
+
+- insufficient research coverage
+- missing experimental validation
+- missing datasets
+- missing benchmarks
+- unresolved limitations
+- conflicting evidence
+- emerging research demand
+- unexplored applications
+- unexplored combinations of methods and domains
+- significant practical or scientific importance
+
+A research opportunity is therefore not defined solely by the absence of papers.
+
+It must be supported by evidence about the structure, limitations, coverage, evolution, or relationships within the indexed research corpus.
+
+---
+
+## 10. Non-Negotiable Evidence Rule
+
+DiscoveryAI must **never** make an unrestricted claim such as:
+
+> "Nobody has researched this."
+
+Instead, the system must use a scoped statement such as:
+
+> **"No relevant evidence was identified within the indexed corpus and search scope."**
+
+Every research-gap result should communicate:
+
+- corpus/search scope
+- retrieval evidence
+- supporting papers
+- contradictory evidence when available
+- confidence
+- limitations
+- reason the opportunity was detected
+
+This prevents the system from confusing lack of retrieved evidence with proof that research does not exist.
+
+---
+
+## 11. Expected Scientific Contribution
+
+The long-term research contribution of DiscoveryAI is to investigate whether AI can move from:
+
+```text
+Scientific Information Retrieval
+        ↓
+Scientific Knowledge Reasoning
+        ↓
+Research Gap Detection
+        ↓
+Evidence Validation
+        ↓
+Research Opportunity Discovery
+
+Potential contributions include:
+
+1. Scientific Research Opportunity Graph
+2. Evidence-grounded research gap detection
+3. Discovery Score
+4. Missing experiment and dataset detection
+5. Temporal research opportunity analysis
+6. False-gap verification using a research critic
+7. Explainable research opportunity recommendations
+8. DiscoveryGapBench research opportunity benchmark
+
+These contributions will be validated experimentally rather than assumed to be effective.
+
+---
+
+## 12. Day 1 Completion Criteria
+
+Day 1 is considered complete when:
+
+- [x] The scientific problem is clearly defined
+- [x] The main research question is defined
+- [x] Supporting research questions are defined
+- [x] Research objectives are defined
+- [x] Project scope is defined
+- [x] Out-of-scope features are defined
+- [x] Initial research hypotheses are defined
+- [x] Evidence-grounded reasoning principle is defined
+- [x] Research opportunity definition is established
+- [x] Non-negotiable evidence rule is established
+
+---
+
+## 13. Day 1 Summary
+
+DiscoveryAI is not intended to be simply a paper search engine or chatbot.
+
+The central research problem is:
+
+> **How can an AI system reason over scientific knowledge and evidence to identify, validate, explain, and prioritize research opportunities that are insufficiently explored within a defined scientific corpus?**
+
+The project will approach this problem through:
+
+- scientific document intelligence
+- scientific knowledge graphs
+- hybrid retrieval
+- GraphRAG
+- temporal reasoning
+- evidence validation
+- research-gap detection
+- opportunity scoring
+- multi-agent scientific reasoning
+- hypothesis generation
+- experiment planning
+
+The system will prioritize **evidence before confidence** and will clearly communicate the limits of its indexed corpus and search scope.
