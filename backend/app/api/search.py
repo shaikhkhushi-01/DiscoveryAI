@@ -64,6 +64,9 @@ def index_document(
 def semantic_search(
     q: str,
     limit: int = 10,
+    year: int | None = None,
+    topic: str | None = None,
+    dataset: str | None = None,
     current_user: User = Depends(get_current_user),
 ):
     query = q.strip()
@@ -75,5 +78,5 @@ def semantic_search(
     return {
         "source": "qdrant",
         "query": query,
-        "items": search_vectors(vector, limit=limit),
+        "items": search_vectors(vector, limit=limit, filters={"year": year, "topic": topic, "dataset": dataset}),
     }
