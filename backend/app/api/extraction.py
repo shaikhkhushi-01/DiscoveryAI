@@ -8,6 +8,8 @@ from app.services.document_ingestion import parse_pdf
 from app.services.extraction import ScientificExtractor
 from app.services.llm.factory import get_llm_provider
 from app.services.paper_understanding import PaperUnderstandingPipeline
+from app.services.embeddings.factory import get_embedding_provider
+from app.services.vector_store import upsert_chunks
 import json
 
 router=APIRouter(prefix="/api/v1/documents",tags=["scientific-extraction"])
@@ -25,7 +27,17 @@ async def extract_document(document_id:int, db:Session=Depends(get_db), current_
         raise HTTPException(status_code=502,detail=f"Scientific extraction failed: {exc}") from exc
     payload = json.loads(document.metadata_json or "{}")
     payload["extraction"] = result
+    vector_status = "not_indexed"
+    try:
+        chunks = [{**chunk, "document_id": document.id} for chunk in parsed.get("chunks", []) if chunk.get("text")]
+        vectors = get_embedding_provider().embed([chunk["text"] for chunk in chunks])
+        indexed = upsert_chunks(chunks, vectors)
+        vector_status = f"indexed:{indexed}"
+    except Exception:
+        vector_status = "unavailable"
+    payload["vector_index_status"] = vector_status
     document.metadata_json = json.dumps(payload)
     document.status = "extracted"
     db.commit()
+    result["vector_index_status"] = vector_status
     return result
