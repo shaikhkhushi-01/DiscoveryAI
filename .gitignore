@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local databases / runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated data
+data/raw/
+data/processed/
+data/embeddings/
+
+# Model artifacts
+models/
+checkpoints/
+
+# Temporary files
+tmp/
+temp/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Python distribution
+*.egg-info/
+dist/
+
+# Secrets
+*.pem
+*.key
+*.crt
