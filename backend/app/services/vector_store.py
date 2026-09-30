@@ -35,6 +35,10 @@ def upsert_chunks(chunks: list[dict[str, Any]], vectors: list[list[float]]) -> i
                 vector=vector,
                 payload={
                     "document_id": chunk["document_id"],
+                    "paper_id": chunk.get("paper_id"),
+                    "year": chunk.get("year"),
+                    "topics": chunk.get("topics", []),
+                    "datasets": chunk.get("datasets", []),
                     "chunk_id": chunk["chunk_id"],
                     "section": chunk.get("section"),
                     "text": chunk.get("text", ""),
