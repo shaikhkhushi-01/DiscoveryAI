@@ -8,6 +8,7 @@ from app.services.document_ingestion import parse_pdf
 from app.services.extraction import ScientificExtractor
 from app.services.llm.factory import get_llm_provider
 from app.services.paper_understanding import PaperUnderstandingPipeline
+import json
 
 router=APIRouter(prefix="/api/v1/documents",tags=["scientific-extraction"])
 
@@ -22,4 +23,9 @@ async def extract_document(document_id:int, db:Session=Depends(get_db), current_
         result=await PaperUnderstandingPipeline(ScientificExtractor(get_llm_provider())).run(parsed)
     except Exception as exc:
         raise HTTPException(status_code=502,detail=f"Scientific extraction failed: {exc}") from exc
+    payload = json.loads(document.metadata_json or "{}")
+    payload["extraction"] = result
+    document.metadata_json = json.dumps(payload)
+    document.status = "extracted"
+    db.commit()
     return result
