@@ -10,6 +10,7 @@ from app.services.llm.factory import get_llm_provider
 from app.services.paper_understanding import PaperUnderstandingPipeline
 from app.services.embeddings.factory import get_embedding_provider
 from app.services.vector_store import upsert_chunks
+from app.services.knowledge_graph.ingest import index_extraction
 import json
 
 router=APIRouter(prefix="/api/v1/documents",tags=["scientific-extraction"])
@@ -36,8 +37,16 @@ async def extract_document(document_id:int, db:Session=Depends(get_db), current_
     except Exception:
         vector_status = "unavailable"
     payload["vector_index_status"] = vector_status
+    graph_status = "not_indexed"
+    try:
+        graph_result = index_extraction(document.id, result)
+        graph_status = graph_result
+    except Exception:
+        graph_status = "unavailable"
+    payload["knowledge_graph_status"] = graph_status
     document.metadata_json = json.dumps(payload)
     document.status = "extracted"
     db.commit()
     result["vector_index_status"] = vector_status
+    result["knowledge_graph_status"] = graph_status
     return result
