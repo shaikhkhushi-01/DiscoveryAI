@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 from app.services.graph_rag.pipeline import retrieve_graph_rag
@@ -15,6 +14,9 @@ def validate_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     candidate["contradictory_signal"] = any(
         x.get("rerank_score", 0) > 0.8 and x.get("graph_score", 0) > 0.4
         for x in sources
+    )
+    candidate["supporting_signal"] = sum(
+        1 for x in sources if x.get("rerank_score", 0) >= 0.5
     )
     if candidate["contradictory_signal"]:
         candidate["status"] = "needs_review"
