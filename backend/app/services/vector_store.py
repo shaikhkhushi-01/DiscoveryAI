@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
@@ -30,7 +31,7 @@ def upsert_chunks(chunks: list[dict[str, Any]], vectors: list[list[float]]) -> i
     for index, (chunk, vector) in enumerate(zip(chunks, vectors)):
         points.append(
             PointStruct(
-                id=f"{chunk['document_id']}:{chunk['chunk_id']}:{index}",
+                id=str(uuid5(NAMESPACE_URL, f"discoveryai:{chunk['document_id']}:{chunk['chunk_id']}:{index}")),
                 vector=vector,
                 payload={
                     "document_id": chunk["document_id"],
