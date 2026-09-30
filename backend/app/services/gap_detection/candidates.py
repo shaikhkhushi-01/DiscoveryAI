@@ -25,12 +25,15 @@ def _graph_candidates(limit: int = 50) -> list[dict[str, Any]]:
 def _missing_experiments(limit: int = 50) -> list[dict[str, Any]]:
     return run(
         """
-        MATCH (p:Paper)-[:USES_METHOD]->(m:Method)
-        MATCH (p)-[:USES_DATASET]->(d:Dataset)
-        WITH m, collect(DISTINCT d.name) AS datasets, count(DISTINCT p) AS papers
-        WHERE papers > 0 AND size(datasets) = 1
-        RETURN m.name AS method, datasets[0] AS observed_dataset, papers
-        ORDER BY papers DESC
+        MATCH (m:Method)
+        MATCH (d:Dataset)
+        OPTIONAL MATCH (p:Paper)-[:USES_METHOD]->(m)-[:USES_DATASET]->(d)
+        WITH m, d, count(DISTINCT p) AS observed
+        WITH m, collect({dataset:d.name, observed:observed}) AS coverage
+        WHERE size([x IN coverage WHERE x.observed > 0]) = 1
+        RETURN m.name AS method,
+               [x IN coverage WHERE x.observed > 0][0].dataset AS observed_dataset,
+               [x IN coverage WHERE x.observed = 0 | x.dataset][0..5] AS candidate_missing_datasets
         LIMIT $limit
         """,
         limit=max(1, min(limit, 200)),
@@ -52,7 +55,7 @@ def generate_graph_candidates(limit: int = 50) -> list[dict[str, Any]]:
         candidates.append({
             "gap_type": GapType.MISSING_EXPERIMENT.value,
             "title": f"Method-dataset coverage gap: {row.get('method')}",
-            "description": f"Indexed evidence shows {row.get('method')} evaluated with {row.get('observed_dataset')} but no second dataset was identified in this graph query.",
+            "description": f"Indexed evidence shows {row.get('method')} associated with {row.get('observed_dataset')}; candidate missing datasets from the indexed graph include {row.get('candidate_missing_datasets', [])}.",
             "evidence_count": row.get("papers", 0),
             "source": "neo4j_graph",
             "confidence": 0.45,
