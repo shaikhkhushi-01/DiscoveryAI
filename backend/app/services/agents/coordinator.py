@@ -7,13 +7,14 @@ from app.services.agents.nodes import (
     report_agent,
     retrieval_agent,
     trend_agent,
+    hypothesis_agent,
 )
 from app.services.agents.state import DiscoveryState
 
 
 def run_discovery_workflow(question: str) -> dict:
     state = DiscoveryState(question=question)
-    for node in (retrieval_agent, gap_agent, evidence_agent, trend_agent, critic_agent, report_agent):
+    for node in (retrieval_agent, gap_agent, evidence_agent, trend_agent, critic_agent, hypothesis_agent, report_agent):
         state = node(state)
     return {
         "question": state.question,
