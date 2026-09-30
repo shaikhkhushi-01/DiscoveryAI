@@ -78,15 +78,16 @@ def discovery_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
         if _extraction(_payload(document)):
             extracted_count += 1
 
-    gaps = _candidate_gaps(db, limit=5)
+    all_gaps = _candidate_gaps(db, limit=1000)
+    gaps = all_gaps[:5]
     return {
         "source": "live_database",
         "demo_data": False,
         "papers_indexed": paper_count,
         "documents_ingested": document_count,
         "documents_extracted": extracted_count,
-        "candidate_gaps": len(_candidate_gaps(db, limit=1000)),
-        "evidence_links": sum(item["evidence_count"] for item in gaps),
+        "candidate_gaps": len(all_gaps),
+        "evidence_links": sum(item["evidence_count"] for item in all_gaps),
         "candidate_gap_preview": gaps,
     }
 
