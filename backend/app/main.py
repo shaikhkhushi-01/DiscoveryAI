@@ -17,6 +17,7 @@ from app.api.gaps import router as gaps_router
 from app.api.evidence import router as evidence_router
 from app.api.trends import router as trends_router
 from app.api.agents import router as agents_router
+from app.api.intelligence import router as intelligence_router
 from app.core.config import settings
 from app.core.environment import validate_environment
 from app.core.errors import (
@@ -59,6 +60,7 @@ app.include_router(gaps_router)
 app.include_router(evidence_router)
 app.include_router(trends_router)
 app.include_router(agents_router)
+app.include_router(intelligence_router)
 
 
 @app.get("/health", tags=["system"])
