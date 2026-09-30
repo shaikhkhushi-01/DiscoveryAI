@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     neo4j_uri: str = Field(default="bolt://localhost:7687")
     neo4j_username: str = Field(default="neo4j")
     neo4j_password: SecretStr = Field(default=SecretStr("change-me"))
+    neo4j_database: str = Field(default="neo4j")
     qdrant_url: str = Field(default="http://localhost:6333")
     redis_url: str = Field(default="redis://localhost:6379/0")
     cors_origins: str = Field(default="http://localhost:3000")
