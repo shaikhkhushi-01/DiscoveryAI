@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.user import User
@@ -42,7 +43,7 @@ def index_document(
         "source": "qdrant",
         "document_id": document.id,
         "indexed_chunks": indexed,
-        "collection": "scientific_chunks",
+        "collection": settings.qdrant_collection,
     }
 
 
