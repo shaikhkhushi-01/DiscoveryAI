@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     embedding_model: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
     embedding_dimension: int = Field(default=384, ge=1)
     qdrant_collection: str = Field(default="scientific_chunks")
+    reranker_model: str = Field(default="cross-encoder/ms-marco-MiniLM-L-6-v2")
     jwt_secret_key: SecretStr = Field(default=SecretStr("development-only-change-me"))
     jwt_algorithm: str = Field(default="HS256")
     access_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
