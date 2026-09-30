@@ -3,7 +3,7 @@ from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchAny, MatchValue, PointStruct, VectorParams
 
 from app.core.config import settings
 
@@ -55,7 +55,9 @@ def search_vectors(vector: list[float], limit: int = 10, filters: dict[str, Any]
     for key in ("year", "topic", "dataset"):
         value = (filters or {}).get(key)
         if value is not None:
-            conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
+            match = MatchAny(any=[value]) if key in {"topic", "dataset"} else MatchValue(value=value)
+            payload_key = {"topic": "topics", "dataset": "datasets"}.get(key, key)
+            conditions.append(FieldCondition(key=payload_key, match=match))
     query_filter = Filter(must=conditions) if conditions else None
     hits = get_qdrant().search(
         collection_name=settings.qdrant_collection,
