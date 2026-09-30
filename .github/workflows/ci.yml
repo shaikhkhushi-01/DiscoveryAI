@@ -1,0 +1,59 @@
+name: DiscoveryAI CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt pytest
+      - name: Compile Python sources
+        run: python -m compileall app
+      - name: Run unit tests
+        env:
+          APP_ENV: development
+          DEBUG: "true"
+          DATABASE_URL: sqlite:///./ci.db
+          NEO4J_PASSWORD: ci-test-password
+        run: pytest app/tests -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+
+  repository:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Foundation check
+        run: python scripts/setup/foundation_check.py
+      - name: Docker Compose validation
+        run: docker compose config
