@@ -3,7 +3,7 @@ from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
 
 from app.core.config import settings
 
@@ -45,11 +45,18 @@ def upsert_chunks(chunks: list[dict[str, Any]], vectors: list[list[float]]) -> i
     return len(points)
 
 
-def search_vectors(vector: list[float], limit: int = 10) -> list[dict[str, Any]]:
+def search_vectors(vector: list[float], limit: int = 10, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     ensure_collection(len(vector))
+    conditions = []
+    for key in ("year", "topic", "dataset"):
+        value = (filters or {}).get(key)
+        if value is not None:
+            conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
+    query_filter = Filter(must=conditions) if conditions else None
     hits = get_qdrant().search(
         collection_name=settings.qdrant_collection,
         query_vector=vector,
         limit=max(1, min(limit, 50)),
+        query_filter=query_filter,
     )
     return [{"score": hit.score, **(hit.payload or {})} for hit in hits]
