@@ -13,6 +13,7 @@ def test_discovery_workflow_trace():
     assert agents == [
         "retrieval_agent",
         "gap_agent",
+        "evidence_validator",
         "trend_agent",
         "research_critic",
         "report_agent",
