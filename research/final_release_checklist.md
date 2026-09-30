@@ -1,0 +1,21 @@
+# DiscoveryAI Final Release Checklist
+
+- [ ] GitHub Actions CI passes
+- [ ] Backend unit tests pass
+- [ ] Frontend production build passes
+- [ ] Docker Compose config validates
+- [ ] Local six-service stack starts successfully
+- [ ] Alembic migrations apply successfully
+- [ ] /health responds successfully
+- [ ] Authentication flow verified
+- [ ] Controlled scientific corpus ingested
+- [ ] DiscoveryGapBench annotations completed
+- [ ] Baselines executed
+- [ ] Ablations executed
+- [ ] Expert evaluation completed
+- [ ] Unsupported-claim rate measured
+- [ ] Citation/evidence correctness measured
+- [ ] Production secrets configured
+- [ ] CORS restricted to deployed frontend
+- [ ] NEXT_PUBLIC_API_URL points to deployed backend
+- [ ] Final dashboard verified against live APIs
