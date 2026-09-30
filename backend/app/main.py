@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -30,6 +31,7 @@ app = FastAPI(
     description="Research-grade AI system for scientific knowledge reasoning and research opportunity discovery.",
 )
 
+app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in settings.cors_origins.split(",") if x.strip()], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.middleware("http")(request_logging_middleware)
 app.add_exception_handler(DiscoveryAIError, discoveryai_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
