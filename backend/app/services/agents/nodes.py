@@ -23,6 +23,25 @@ def gap_agent(state: DiscoveryState) -> DiscoveryState:
     return state
 
 
+def evidence_agent(state: DiscoveryState) -> DiscoveryState:
+    state.evidence = {
+        "items": state.gaps.get("items", []),
+        "validated_count": sum(
+            1 for item in state.gaps.get("items", [])
+            if item.get("evidence_status") == "evidence_supported"
+        ),
+        "review_count": sum(
+            1 for item in state.gaps.get("items", [])
+            if item.get("evidence_status") == "contradicted_or_needs_review"
+        ),
+    }
+    _record(state, "evidence_validator", "completed", {
+        "validated": state.evidence["validated_count"],
+        "review": state.evidence["review_count"],
+    })
+    return state
+
+
 def trend_agent(state: DiscoveryState) -> DiscoveryState:
     state.trends = analyze_all(limit=20)
     _record(state, "trend_agent", "completed", {"items": len(state.trends.get("items", []))})
@@ -55,6 +74,7 @@ def report_agent(state: DiscoveryState) -> DiscoveryState:
         "trend_signals": state.trends.get("emerging_topics", [])[:10],
         "evidence_count": len(state.retrieval.get("items", [])),
         "critic": state.critique,
+        "evidence_validation": state.evidence,
         "scope": "indexed_corpus",
     }
     _record(state, "report_agent", "completed", {"opportunities": len(opportunities)})
