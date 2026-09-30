@@ -12,7 +12,8 @@ from app.services.vector_store import search_vectors
 def _tokens(text: str) -> set[str]:
     return {x for x in re.findall(r"[a-zA-Z0-9][a-zA-Z0-9_-]+", text.lower()) if len(x) > 2}
 
-def keyword_search(query: str, limit: int = 20) -> list[dict[str, Any]]:
+def keyword_search(query: str, limit: int = 20, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    filters = filters or {}
     tokens = _tokens(query)
     if not tokens:
         return []
@@ -21,6 +22,8 @@ def keyword_search(query: str, limit: int = 20) -> list[dict[str, Any]]:
         rows = db.query(Paper).outerjoin(Document).limit(500).all()
         scored = []
         for paper in rows:
+            if filters.get("year") is not None and (not paper.publication_date or paper.publication_date.year != filters["year"]):
+                continue
             hay = " ".join([paper.title or "", paper.abstract or ""]).lower()
             overlap = len(tokens & _tokens(hay))
             if overlap:
@@ -33,7 +36,7 @@ def hybrid_search(query: str, *, limit: int = 10, filters: dict[str, Any] | None
     filters = filters or {}
     vector = get_embedding_provider().embed([query])[0]
     semantic = search_vectors(vector, limit=min(50, limit * 5), filters=filters)
-    keyword = keyword_search(query, limit=limit * 5)
+    keyword = keyword_search(query, limit=limit * 5, filters=filters)
     by_key: dict[tuple[Any, Any], dict[str, Any]] = {}
     for item in semantic:
         key = (item.get("document_id"), item.get("chunk_id"))
