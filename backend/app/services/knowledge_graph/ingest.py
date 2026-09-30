@@ -28,9 +28,9 @@ def index_extraction(document_id: int, extraction: dict[str, Any]) -> dict[str, 
     run(
         """
         MERGE (p:Paper {id: $paper_id})
-        SET p.title=$title, p.year=$year, p.doi=$doi
+        SET p.title=$title, p.year=$year, p.doi=$doi, p.publication_date=$publication_date
         """,
-        paper_id=document_id, title=payload["title"], year=payload["year"], doi=payload["doi"],
+        paper_id=document_id, title=payload["title"], year=payload["year"], doi=payload["doi"], publication_date=payload["year"],
     )
     totals = {"Paper": 1}
     for field, label, relation in [
