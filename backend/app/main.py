@@ -14,6 +14,7 @@ from app.api.rag import router as rag_router
 from app.api.knowledge_graph import router as knowledge_graph_router
 from app.api.graph_rag import router as graph_rag_router
 from app.api.gaps import router as gaps_router
+from app.api.evidence import router as evidence_router
 from app.core.config import settings
 from app.core.environment import validate_environment
 from app.core.errors import (
@@ -53,6 +54,7 @@ app.include_router(rag_router)
 app.include_router(knowledge_graph_router)
 app.include_router(graph_rag_router)
 app.include_router(gaps_router)
+app.include_router(evidence_router)
 
 
 @app.get("/health", tags=["system"])
