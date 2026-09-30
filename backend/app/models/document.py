@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 class Document(Base):
@@ -9,4 +9,7 @@ class Document(Base):
     storage_uri: Mapped[str | None] = mapped_column(String(1000))
     checksum: Mapped[str | None] = mapped_column(String(128), unique=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="uploaded")
+    page_count: Mapped[int | None]
+    extracted_text: Mapped[str | None] = mapped_column(Text)
+    metadata_json: Mapped[str | None] = mapped_column(Text)
     paper: Mapped["Paper"] = relationship(back_populates="document")
