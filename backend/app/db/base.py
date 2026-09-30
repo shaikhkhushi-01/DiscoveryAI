@@ -1,5 +1,7 @@
-from sqlalchemy.orm import DeclarativeBase
+from app.db.base import Base
+from app.models.organization import Organization
+from app.models.project import Project
+from app.models.role import Role
+from app.models.user import User
 
-
-class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy ORM models."""
+__all__ = ["Base", "User", "Role", "Organization", "Project"]
