@@ -1,0 +1,9 @@
+{
+  "query": "example scientific research question",
+  "relevant_document_ids": ["document-1", "document-2"],
+  "relevance": {
+    "document-1": 2,
+    "document-2": 1
+  },
+  "notes": "Replace with expert-annotated relevance judgments. Do not report metrics before this set is populated."
+}
