@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const gaps = [
   { title: "Cross-dataset robustness evaluation", type: "Missing experiment", score: 86, evidence: 12 },
@@ -16,6 +16,38 @@ const papers = [
 
 export default function Home() {
   const [active, setActive] = useState("Overview");
+  const [live, setLive] = useState(false);
+  const [summary, setSummary] = useState({ papers: 1248, concepts: 7936, gaps: 184, evidence: 14200 });
+  const [liveGaps, setLiveGaps] = useState(gaps);
+  const [livePapers, setLivePapers] = useState(papers);
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+
+  useEffect(() => {
+    if (!apiBase) return;
+    Promise.all([
+      fetch(apiBase + "/api/v1/discovery/summary").then(r => r.ok ? r.json() : Promise.reject(r)),
+      fetch(apiBase + "/api/v1/discovery/gaps?limit=10").then(r => r.ok ? r.json() : Promise.reject(r)),
+      fetch(apiBase + "/api/v1/discovery/papers?limit=10").then(r => r.ok ? r.json() : Promise.reject(r)),
+    ]).then(([s, g, p]) => {
+      setLive(true);
+      setSummary({ papers: s.papers_indexed, concepts: s.documents_extracted, gaps: s.candidate_gaps, evidence: s.evidence_links });
+      setLiveGaps((g.items || []).map((x: any) => ({ title: x.title, type: x.type, score: x.score, evidence: x.evidence_count })));
+      setLivePapers((p.items || []).map((x: any) => ({ title: x.title, year: x.year || "—", tags: [x.status || "paper"] })));
+    }).catch(() => setLive(false));
+  }, [apiBase]);
+
+  const runSearch = async () => {
+    if (!query.trim() || !apiBase) return;
+    try {
+      const r = await fetch(apiBase + "/api/v1/discovery/search?q=" + encodeURIComponent(query));
+      const data = await r.json();
+      setSearchResults(data.items || []);
+    } catch {
+      setSearchResults([]);
+    }
+  };
 
   return (
     <main className="app-shell">
@@ -41,7 +73,7 @@ export default function Home() {
             <h1>{active}</h1>
           </div>
           <div className="top-actions">
-            <span className="demo-pill">DEMO DATA</span>
+            <span className={live ? "demo-pill live-pill" : "demo-pill"}>{live ? "LIVE DATA" : "DEMO DATA"}</span>
             <button className="icon-btn">⌕</button>
             <div className="avatar">AI</div>
           </div>
@@ -53,24 +85,24 @@ export default function Home() {
               <span className="label">RESEARCH OPPORTUNITY ENGINE</span>
               <h2>Find what the literature<br /><em>has not answered yet.</em></h2>
               <p>Evidence-grounded analysis across papers, methods, datasets, experiments and research gaps.</p>
-              <div className="search-box"><span>⌕</span><input placeholder="Ask a research question… e.g. What experiments are missing in scientific RAG?" /><button>Explore</button></div>
+              <div className="search-box"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch}>Explore</button></div>{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any) => <div key={r.id}><strong>{r.title}</strong><span>{r.year || "Year unavailable"}</span></div>)}</div>}
             </div>
             <div className="hero-orbit"><div className="orbit-ring ring-1" /><div className="orbit-ring ring-2" /><div className="orbit-core">KG<br /><small>REASONING</small></div><span className="node n1">Papers</span><span className="node n2">Methods</span><span className="node n3">Gaps</span><span className="node n4">Evidence</span></div>
           </section>
 
-          <div className="notice"><span>i</span><div><strong>Transparent demo state</strong><br />The dashboard is connected to the DiscoveryAI interface layer. Metrics and gap cards below are representative UI data until the live ingestion, vector search and graph services are running.</div></div>
+          <div className="notice"><span>i</span><div><strong>{live ? "Live database connected" : "Transparent demo state"}</strong><br />{live ? "Metrics, papers and candidate-gap signals are being read from the DiscoveryAI API." : "The interface is ready for the live API. Set NEXT_PUBLIC_API_URL in Vercel when the FastAPI backend is deployed."}</div></div>
 
           <section className="stats-grid">
-            <Stat label="Papers indexed" value="1,248" delta="+18.4%" />
-            <Stat label="Concepts extracted" value="7,936" delta="+12.1%" />
-            <Stat label="Candidate gaps" value="184" delta="+9.7%" />
-            <Stat label="Evidence links" value="14.2K" delta="+21.6%" />
+            <Stat label="Papers indexed" value={summary.papers.toLocaleString()} delta={live ? "live" : "+18.4%"} />
+            <Stat label="Documents extracted" value={summary.concepts.toLocaleString()} delta={live ? "live" : "+12.1%"} />
+            <Stat label="Candidate gaps" value={summary.gaps.toLocaleString()} delta={live ? "live" : "+9.7%"} />
+            <Stat label="Evidence links" value={summary.evidence.toLocaleString()} delta={live ? "live" : "+21.6%"} />
           </section>
 
           <section className="grid-2">
             <div className="panel">
               <div className="panel-head"><div><span className="label">OPPORTUNITIES</span><h3>Research gaps detected</h3></div><button className="text-btn">View all →</button></div>
-              <div className="gap-list">{gaps.map((g) => <div className="gap-row" key={g.title}><div className="gap-icon">◈</div><div className="gap-main"><strong>{g.title}</strong><span>{g.type} · {g.evidence} evidence links</span></div><div className="score"><b>{g.score}</b><small>DS</small></div></div>)}</div>
+              <div className="gap-list">{liveGaps.map((g) => <div className="gap-row" key={g.title}><div className="gap-icon">◈</div><div className="gap-main"><strong>{g.title}</strong><span>{g.type} · {g.evidence} evidence links</span></div><div className="score"><b>{g.score}</b><small>DS</small></div></div>)}</div>
             </div>
 
             <div className="panel">
@@ -92,7 +124,7 @@ export default function Home() {
           <section className="grid-2">
             <div className="panel">
               <div className="panel-head"><div><span className="label">PAPER INTELLIGENCE</span><h3>Recently analyzed</h3></div></div>
-              <div className="paper-list">{papers.map((p) => <div className="paper" key={p.title}><div className="paper-file">PDF</div><div><strong>{p.title}</strong><span>{p.year} · {p.tags.map(t => <em key={t}>{t}</em>)}</span></div><button>→</button></div>)}</div>
+              <div className="paper-list">{livePapers.map((p) => <div className="paper" key={p.title}><div className="paper-file">PDF</div><div><strong>{p.title}</strong><span>{p.year} · {p.tags.map(t => <em key={t}>{t}</em>)}</span></div><button>→</button></div>)}</div>
             </div>
             <div className="panel opportunity"><span className="label">NEXT DISCOVERY</span><h3>Turn a gap into a hypothesis.</h3><p>Validated gaps can flow into experiment planning, hypothesis generation and evidence-backed research reports.</p><button className="primary">Open Discovery Flow →</button><div className="flow"><span>Gap</span><i>→</i><span>Hypothesis</span><i>→</i><span>Experiment</span></div></div>
           </section>
