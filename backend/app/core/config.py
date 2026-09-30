@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     neo4j_password: SecretStr = Field(default=SecretStr("change-me"))
     qdrant_url: str = Field(default="http://localhost:6333")
     redis_url: str = Field(default="redis://localhost:6379/0")
+    cors_origins: str = Field(default="http://localhost:3000")
     llm_provider: str = Field(default="ollama")
     ollama_base_url: str = Field(default="http://localhost:11434")
     embedding_provider: str = Field(default="sentence-transformers")
