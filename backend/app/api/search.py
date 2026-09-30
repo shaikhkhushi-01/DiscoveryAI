@@ -31,8 +31,21 @@ def index_document(
         raise HTTPException(status_code=422, detail="Document has no stored PDF")
 
     parsed = process_pdf(Path(document.storage_uri))
+    try:
+        extraction = json.loads(document.metadata_json or "{}").get("extraction", {})
+    except json.JSONDecodeError:
+        extraction = {}
+    entities = extraction.get("entities", {}) if isinstance(extraction, dict) else {}
+    paper = document.paper
     chunks = [
-        {**chunk, "document_id": document.id}
+        {
+            **chunk,
+            "document_id": document.id,
+            "paper_id": paper.id,
+            "year": extraction.get("year") or (paper.publication_date.year if paper and paper.publication_date else None),
+            "topics": entities.get("topics", []) if isinstance(entities, dict) else [],
+            "datasets": entities.get("datasets", []) if isinstance(entities, dict) else [],
+        }
         for chunk in parsed.get("chunks", [])
         if chunk.get("text")
     ]
