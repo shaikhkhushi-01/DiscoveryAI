@@ -10,3 +10,5 @@ pwdlib[argon2]==0.2.1
 python-multipart==0.0.20
 PyMuPDF==1.25.3
 httpx==0.28.1
+
+openai==1.68.2
