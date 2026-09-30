@@ -4,6 +4,7 @@ from typing import Any
 from app.services.agents.state import DiscoveryState
 from app.services.evidence.engine import score_opportunities
 from app.services.graph_rag.pipeline import retrieve_graph_rag
+from app.services.hypothesis_intelligence import generate_opportunity_plan
 from app.services.trends.engine import analyze_all
 
 
@@ -63,6 +64,14 @@ def critic_agent(state: DiscoveryState) -> DiscoveryState:
         "rule": "No candidate is treated as globally novel solely because retrieval is sparse.",
     }
     _record(state, "research_critic", "completed", {"issues": len(issues)})
+    return state
+
+
+def hypothesis_agent(state: DiscoveryState) -> DiscoveryState:
+    # Agent node is synchronous; the API workflow can use the already scored opportunities
+    # to expose experiment-ready candidates without inventing results.
+    state.report["hypothesis_status"] = "available_via /api/v1/intelligence/hypotheses"
+    _record(state, "hypothesis_agent", "completed", {"status": "proposal_only"})
     return state
 
 
