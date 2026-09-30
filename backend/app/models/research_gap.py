@@ -9,4 +9,7 @@ class ResearchGap(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     gap_type: Mapped[str] = mapped_column(String(50), nullable=False)
     confidence: Mapped[float | None]
+    discovery_score: Mapped[float | None]
+    score_version: Mapped[str | None] = mapped_column(String(20))
+    evidence_status: Mapped[str | None] = mapped_column(String(50))
     project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"))
