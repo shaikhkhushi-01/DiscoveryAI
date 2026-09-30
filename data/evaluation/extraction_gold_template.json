@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "description": "Human-annotated gold record template for scientific extraction evaluation.",
+  "records": [
+    {
+      "paper_id": "replace-with-paper-id",
+      "topics": [],
+      "keywords": [],
+      "methods": [],
+      "algorithms": [],
+      "datasets": [],
+      "problems": [],
+      "applications": [],
+      "domains": [],
+      "metrics": [],
+      "baselines": [],
+      "limitations": [],
+      "future_work": []
+    }
+  ]
+}
