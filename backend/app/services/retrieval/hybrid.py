@@ -42,6 +42,7 @@ def hybrid_search(query: str, *, limit: int = 10, filters: dict[str, Any] | None
         for key, existing in list(by_key.items()):
             if existing.get("paper_id") == item["paper_id"]:
                 existing["keyword_score"] = item["keyword_score"]
+                existing["paper_id"] = item["paper_id"]
     for item in by_key.values():
         item["hybrid_score"] = 0.75 * item.get("semantic_score", 0.0) + 0.25 * item.get("keyword_score", 0.0)
     return sorted(by_key.values(), key=lambda x: x["hybrid_score"], reverse=True)[:limit]
