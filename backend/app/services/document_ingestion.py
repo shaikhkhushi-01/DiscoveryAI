@@ -6,8 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-import fitz
-
 MAX_PDF_BYTES = 20 * 1024 * 1024
 ALLOWED_CONTENT_TYPE = "application/pdf"
 
@@ -39,11 +37,13 @@ def store_pdf(content: bytes, root: Path, digest: str) -> Path:
     path.write_bytes(content)
     return path
 
-def _metadata(doc: fitz.Document) -> dict[str, Any]:
+def _metadata(doc: Any) -> dict[str, Any]:
     raw = doc.metadata or {}
     return {k: v for k, v in raw.items() if v}
 
 def parse_pdf(path: Path) -> dict[str, Any]:
+    import fitz
+
     try:
         doc = fitz.open(path)
     except Exception as exc:
@@ -81,6 +81,8 @@ def detect_sections(text: str) -> list[dict[str, str]]:
     return sections
 
 def extract_tables_and_figures(path: Path) -> dict[str, Any]:
+    import fitz
+
     doc = fitz.open(path)
     try:
         tables = []
