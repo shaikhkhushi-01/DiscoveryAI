@@ -3,29 +3,24 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any
 
-from neo4j import GraphDatabase
-
 from app.core.config import settings
-
 
 @lru_cache
 def get_driver():
+    from neo4j import GraphDatabase
     return GraphDatabase.driver(
         settings.neo4j_uri,
         auth=(settings.neo4j_username, settings.neo4j_password.get_secret_value()),
     )
 
-
 def close_driver() -> None:
     get_driver().close()
     get_driver.cache_clear()
-
 
 def run(query: str, **params: Any) -> list[dict[str, Any]]:
     with get_driver().session(database=settings.neo4j_database) as session:
         result = session.run(query, **params)
         return [record.data() for record in result]
-
 
 def ensure_schema() -> None:
     statements = [
