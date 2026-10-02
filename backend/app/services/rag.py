@@ -14,9 +14,7 @@ Every factual claim about the literature must be traceable to a source ID."""
 async def answer_question(query: str, *, limit: int = 8, filters: dict[str, Any] | None = None) -> dict[str, Any]:
     retrieved = hybrid_search(query, limit=max(limit * 3, 12), filters=filters)
     ranked = rerank(query, retrieved, limit=limit)
-    context = "
-
-".join(
+    context = "\n\n".join(
         f"[EVIDENCE {i+1}] document={item.get('document_id')} chunk={item.get('chunk_id')}\n{item.get('text','')}"
         for i, item in enumerate(ranked)
     )
