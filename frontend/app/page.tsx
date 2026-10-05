@@ -24,7 +24,9 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [apiError, setApiError] = useState("");
-  // Production fallback keeps the dashboard connected even when the Vercel env var is missing.\n  // Override with NEXT_PUBLIC_API_URL for another deployment.\n  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://discoveryai-6dmk.onrender.com";
+  // Production fallback keeps the dashboard connected even when the Vercel env var is missing.
+  // Override with NEXT_PUBLIC_API_URL for another deployment.
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://discoveryai-6dmk.onrender.com";
 
   useEffect(() => {
     if (!apiBase) return;
@@ -32,8 +34,14 @@ export default function Home() {
       apiGet("/api/v1/public/overview"),
       apiGet("/api/v1/public/gaps?limit=10"),
       apiGet("/api/v1/public/trends?limit=20"),
-    ]).then(([g, t]) => {
+    ]).then(([overview, g, t]) => {
       setLive(true);
+      setSummary({
+        papers: overview.papers_indexed ?? 0,
+        concepts: overview.concepts ?? 0,
+        gaps: g.count ?? (g.items || []).length,
+        evidence: overview.evidence_links ?? 0,
+      });
       setLiveGaps((g.items || []).map((x: any) => ({
         title: x.title,
         type: x.gap_type || x.type || "Research gap",
