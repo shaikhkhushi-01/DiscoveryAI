@@ -1,7 +1,9 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://discoveryai-6dmk.onrender.com";
 
 export function apiUrl(path: string) {
-  return API_BASE ? API_BASE.replace(/\/$/, "") + path : path;
+  return API_BASE.replace(/\\/$/, "") + path;
 }
 
 export async function apiGet(path: string, token?: string) {
