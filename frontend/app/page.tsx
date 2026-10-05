@@ -29,8 +29,9 @@ export default function Home() {
   useEffect(() => {
     if (!apiBase) return;
     Promise.all([
-      apiGet("/api/v1/gaps?limit=10"),
-      apiGet("/api/v1/trends?limit=20"),
+      apiGet("/api/v1/public/overview"),
+      apiGet("/api/v1/public/gaps?limit=10"),
+      apiGet("/api/v1/public/trends?limit=20"),
     ]).then(([g, t]) => {
       setLive(true);
       setLiveGaps((g.items || []).map((x: any) => ({
@@ -49,7 +50,7 @@ export default function Home() {
   const runSearch = async () => {
     if (!query.trim() || !apiBase) return;
     try {
-      const data = await apiGet("/api/v1/graph-rag/search?q=" + encodeURIComponent(query));
+      const data = await apiPost("/api/v1/public/graph-rag/retrieve", { query: query.trim(), limit: 8 });
       setSearchResults(data.items || []);
       setActive("Papers");
     } catch {
