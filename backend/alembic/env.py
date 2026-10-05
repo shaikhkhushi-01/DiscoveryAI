@@ -2,13 +2,19 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from sqlalchemy.engine import make_url
 
 from app.db.base import Base
 import app.models  # noqa: F401
 from app.core.config import settings
 
 config = context.config
-from app.db.session import _database_url
+def _database_url(value: str) -> str:
+    url = make_url(value)
+    if url.drivername in {"postgresql", "postgres"}:
+        url = url.set(drivername="postgresql+psycopg")
+    return url.render_as_string(hide_password=False)
+
 
 config.set_main_option("sqlalchemy.url", _database_url(settings.database_url))
 
