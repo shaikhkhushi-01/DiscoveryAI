@@ -3,7 +3,8 @@ const API_BASE =
   "https://discoveryai-6dmk.onrender.com";
 
 export function apiUrl(path: string) {
-  return API_BASE.replace(/\\/$/, "") + path;
+  const base = API_BASE.endsWith("/") ? API_BASE.slice(0, -1) : API_BASE;
+  return base + path;
 }
 
 export async function apiGet(path: string, token?: string) {
