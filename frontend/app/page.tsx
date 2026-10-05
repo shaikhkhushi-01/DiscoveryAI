@@ -24,7 +24,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [apiError, setApiError] = useState("");
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+  // Production fallback keeps the dashboard connected even when the Vercel env var is missing.\n  // Override with NEXT_PUBLIC_API_URL for another deployment.\n  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://discoveryai-6dmk.onrender.com";
 
   useEffect(() => {
     if (!apiBase) return;
@@ -100,7 +100,7 @@ export default function Home() {
             <div className="hero-orbit"><div className="orbit-ring ring-1" /><div className="orbit-ring ring-2" /><div className="orbit-core">KG<br /><small>REASONING</small></div><span className="node n1">Papers</span><span className="node n2">Methods</span><span className="node n3">Gaps</span><span className="node n4">Evidence</span></div>
           </section>
 
-          <div className="notice"><span>i</span><div><strong>{live ? "Live database connected" : "Transparent demo state"}</strong><br />{live ? "Metrics, papers and candidate-gap signals are being read from the DiscoveryAI API." : "The interface is ready for the live API. Set NEXT_PUBLIC_API_URL in Vercel when the FastAPI backend is deployed."}</div></div>
+          <div className="notice"><span>i</span><div><strong>{live ? "Live database connected" : "Transparent demo state"}</strong><br />{live ? "Metrics, papers and candidate-gap signals are being read from the DiscoveryAI API." : apiError || "Connecting to the DiscoveryAI API…"}</div></div>
 
           <section className="stats-grid">
             <Stat label="Papers indexed" value={summary.papers.toLocaleString()} delta={live ? "live" : "+18.4%"} />
