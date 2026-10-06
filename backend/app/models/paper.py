@@ -1,6 +1,7 @@
 from sqlalchemy import Date, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+from app.models.author import paper_authors
 class Paper(Base):
     __tablename__ = "papers"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -10,4 +11,4 @@ class Paper(Base):
     publication_date: Mapped[Date | None] = mapped_column(Date)
     venue: Mapped[str | None] = mapped_column(String(255))
     document: Mapped["Document | None"] = relationship(back_populates="paper", uselist=False)
-    authors: Mapped[list["Author"]] = relationship(secondary="paper_authors", back_populates="papers")
+    authors: Mapped[list["Author"]] = relationship(secondary=paper_authors, back_populates="papers")
