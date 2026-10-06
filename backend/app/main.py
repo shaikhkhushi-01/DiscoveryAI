@@ -29,6 +29,7 @@ from app.core.errors import (
 )
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import request_logging_middleware
+import app.models.registry  # noqa: F401
 
 validate_environment()
 configure_logging()
