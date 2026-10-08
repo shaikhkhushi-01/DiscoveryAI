@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = Field(default=None)
     openai_model: str = Field(default="gpt-4o-mini")
     gemini_api_key: SecretStr | None = Field(default=None)
-    gemini_model: str = Field(default="gemini-2.5-flash-lite")
+    gemini_model: str = Field(default="gemini-3.5-flash-lite")
     gemini_base_url: str = Field(default="https://generativelanguage.googleapis.com/v1beta")
     embedding_provider: str = Field(default="sentence-transformers")
     embedding_model: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
