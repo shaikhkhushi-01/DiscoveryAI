@@ -18,6 +18,7 @@ from app.api.evidence import router as evidence_router
 from app.api.trends import router as trends_router
 from app.api.agents import router as agents_router
 from app.api.intelligence import router as intelligence_router
+from app.api.indexing import router as indexing_router
 from app.api.public_dashboard import router as public_dashboard_router
 from app.core.config import settings
 from app.core.environment import validate_environment
@@ -63,6 +64,7 @@ app.include_router(evidence_router)
 app.include_router(trends_router)
 app.include_router(agents_router)
 app.include_router(intelligence_router)
+app.include_router(indexing_router)
 app.include_router(public_dashboard_router)
 
 
