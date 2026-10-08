@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.models.document import Document
 from app.models.indexing_job import IndexingJob
 from app.models.user import User
-from app.services.indexing import enqueue_indexing, get_indexing_job
+from app.services.indexing import enqueue_indexing, get_indexing_job, process_job
 
 router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
 
@@ -29,14 +29,21 @@ def _job_response(job: IndexingJob) -> dict:
 @router.post("/{document_id}/index", status_code=status.HTTP_202_ACCEPTED)
 def queue_indexing(
     document_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     document = db.get(Document, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
+
     job = enqueue_indexing(db, document_id)
     db.commit()
+
+    # There is no separate Render worker in the current deployment.
+    # Run the durable indexing job after the HTTP response is returned.
+    background_tasks.add_task(process_job, job.id)
+
     return _job_response(job)
 
 
