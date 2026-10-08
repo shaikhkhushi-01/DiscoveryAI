@@ -28,6 +28,7 @@ class GeminiProvider(LLMProvider):
             "contents": contents,
             "generationConfig": {
                 "temperature": temperature,
+                "responseMimeType": "application/json",
             },
         }
         url = f"{self.base_url}/models/{self.model}:generateContent"
