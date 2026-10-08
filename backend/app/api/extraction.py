@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.auth.dependencies import get_current_user
 from app.db.session import get_db
@@ -7,7 +7,7 @@ from app.models.user import User
 from app.services.extraction import ScientificExtractor
 from app.services.llm.factory import get_llm_provider
 from app.services.paper_understanding import PaperUnderstandingPipeline
-from app.services.indexing import enqueue_indexing
+from app.services.indexing import enqueue_indexing, process_job
 import json
 
 router = APIRouter(prefix="/api/v1/documents", tags=["scientific-extraction"])
@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/v1/documents", tags=["scientific-extraction"])
 @router.post("/{document_id}/extract")
 async def extract_document(
     document_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -82,6 +83,12 @@ async def extract_document(
     document.status = "extracted"
     job = enqueue_indexing(db, document.id)
     db.commit()
+
+    # Render does not provide a dedicated worker in the current deployment.
+    # FastAPI BackgroundTasks lets the response return first, then processes
+    # the durable job inside the existing web service process. The job state
+    # and retry logic remain persisted in PostgreSQL.
+    background_tasks.add_task(process_job, job.id)
 
     result["indexing_job_id"] = job.id
     result["vector_index_status"] = "queued"
