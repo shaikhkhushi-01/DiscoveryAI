@@ -127,6 +127,21 @@ def process_job(job_id: int) -> dict[str, Any]:
         if document is None:
             raise ValueError("Document not found")
 
+        # A job may be started directly by FastAPI BackgroundTasks rather than
+        # through claim_next_job(), so claim it here when it is still queued.
+        # This keeps attempts/status consistent for both execution paths.
+        if job.status in {"queued", "retry"}:
+            if job.attempts >= MAX_ATTEMPTS:
+                job.status = "failed"
+                job.last_error = "Maximum indexing attempts reached"
+                db.commit()
+                return {"job_id": job.id, "status": job.status, "error": job.last_error}
+            job.status = "running"
+            job.attempts += 1
+            job.started_at = datetime.now(timezone.utc)
+            job.updated_at = datetime.now(timezone.utc)
+            db.commit()
+
         extraction, chunks = _load_payload(document)
         errors: list[str] = []
 
