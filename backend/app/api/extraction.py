@@ -7,6 +7,7 @@ from app.models.user import User
 from app.services.extraction import ScientificExtractor
 from app.services.llm.factory import get_llm_provider
 from app.services.paper_understanding import PaperUnderstandingPipeline
+from app.services.indexing import enqueue_indexing
 import json
 
 router = APIRouter(prefix="/api/v1/documents", tags=["scientific-extraction"])
@@ -72,13 +73,17 @@ async def extract_document(
 
     payload = json.loads(document.metadata_json or "{}")
     payload["extraction"] = result
-    payload["vector_index_status"] = "deferred"
-    payload["knowledge_graph_status"] = "deferred"
+    # Queue the heavy Qdrant/Neo4j work after extraction. The web request
+    # remains lightweight; a separate worker claims and processes this job.
+    payload["vector_index_status"] = "queued"
+    payload["knowledge_graph_status"] = "queued"
 
     document.metadata_json = json.dumps(payload)
     document.status = "extracted"
+    job = enqueue_indexing(db, document.id)
     db.commit()
 
-    result["vector_index_status"] = "deferred"
-    result["knowledge_graph_status"] = "deferred"
+    result["indexing_job_id"] = job.id
+    result["vector_index_status"] = "queued"
+    result["knowledge_graph_status"] = "queued"
     return result
