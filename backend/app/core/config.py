@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     gemini_base_url: str = Field(default="https://generativelanguage.googleapis.com/v1beta")
     embedding_provider: str = Field(default="sentence-transformers")
     embedding_model: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
+    gemini_embedding_model: str = Field(default="gemini-embedding-001")
     embedding_dimension: int = Field(default=384, ge=1)
     qdrant_collection: str = Field(default="scientific_chunks")
     reranker_model: str = Field(default="cross-encoder/ms-marco-MiniLM-L-6-v2")
