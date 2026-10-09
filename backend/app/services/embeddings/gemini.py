@@ -33,7 +33,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
             for text in texts:
                 response = client.post(
                     f"{base_url}/models/{model}:embedContent",
-                    params={"key": api_key},
+                    headers={"x-goog-api-key": api_key},
                     json={
                         "model": f"models/{model}",
                         "content": {"parts": [{"text": text[:12000]}]},
