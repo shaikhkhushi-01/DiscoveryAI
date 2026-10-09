@@ -8,7 +8,8 @@ from app.core.config import settings
 @lru_cache
 def get_qdrant():
     from qdrant_client import QdrantClient
-    return QdrantClient(url=settings.qdrant_url)
+    api_key = settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None
+    return QdrantClient(url=settings.qdrant_url, api_key=api_key)
 
 def ensure_collection(dimension: int) -> None:
     from qdrant_client.models import Distance, VectorParams
