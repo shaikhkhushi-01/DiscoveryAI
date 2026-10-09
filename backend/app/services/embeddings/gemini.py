@@ -24,7 +24,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
             )
 
         api_key = settings.gemini_api_key.get_secret_value()
-        model = settings.embedding_model
+        model = settings.gemini_embedding_model
         base_url = settings.gemini_base_url.rstrip("/")
         vectors: list[list[float]] = []
 
