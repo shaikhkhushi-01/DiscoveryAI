@@ -3,29 +3,16 @@
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
-const gaps = [
-  { title: "Cross-dataset robustness evaluation", type: "Missing experiment", score: 86, evidence: 12 },
-  { title: "Long-tail scientific benchmark", type: "Dataset gap", score: 81, evidence: 9 },
-  { title: "Domain transfer beyond benchmark setting", type: "Application gap", score: 74, evidence: 15 },
-];
-
-const papers = [
-  { title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", year: 2020, tags: ["RAG", "Retrieval"] },
-  { title: "GraphRAG: Unlocking LLM Discovery on Text Corpora", year: 2024, tags: ["GraphRAG", "Knowledge Graph"] },
-  { title: "Scientific Document Understanding with Multimodal Models", year: 2025, tags: ["Scientific NLP", "Multimodal"] },
-];
-
 export default function Home() {
   const [active, setActive] = useState("Overview");
   const [live, setLive] = useState(false);
-  const [summary, setSummary] = useState({ papers: 1248, concepts: 7936, gaps: 184, evidence: 14200 });
-  const [liveGaps, setLiveGaps] = useState(gaps);
-  const [livePapers, setLivePapers] = useState(papers);
+  const [summary, setSummary] = useState({ papers: 0, concepts: 0, gaps: 0, evidence: 0 });
+  const [liveGaps, setLiveGaps] = useState<any[]>([]);
+  const [livePapers, setLivePapers] = useState<any[]>([]);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [apiError, setApiError] = useState("");
-  // Production fallback keeps the dashboard connected even when the Vercel env var is missing.
-  // Override with NEXT_PUBLIC_API_URL for another deployment.
+  // Override with NEXT_PUBLIC_API_URL to point at the deployed backend.
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://discoveryai-6dmk.onrender.com";
 
   useEffect(() => {
@@ -51,7 +38,7 @@ export default function Home() {
       setApiError("");
     }).catch(() => {
       setLive(false);
-      setApiError("Live scientific APIs are unavailable. Showing representative interface data.");
+      setApiError("Live API data could not be loaded. Metrics are shown as zero until the backend responds; no sample metrics are substituted.");
     });
   }, [apiBase]);
 
@@ -111,22 +98,22 @@ export default function Home() {
           <div className="notice"><span>i</span><div><strong>{live ? "Live database connected" : "Transparent demo state"}</strong><br />{live ? "Metrics, papers and candidate-gap signals are being read from the DiscoveryAI API." : apiError || "Connecting to the DiscoveryAI API…"}</div></div>
 
           <section className="stats-grid">
-            <Stat label="Papers indexed" value={summary.papers.toLocaleString()} delta={live ? "live" : "+18.4%"} />
-            <Stat label="Documents extracted" value={summary.concepts.toLocaleString()} delta={live ? "live" : "+12.1%"} />
-            <Stat label="Candidate gaps" value={summary.gaps.toLocaleString()} delta={live ? "live" : "+9.7%"} />
-            <Stat label="Evidence links" value={summary.evidence.toLocaleString()} delta={live ? "live" : "+21.6%"} />
+            <Stat label="Papers indexed" value={summary.papers.toLocaleString()} delta={live ? "live data" : "unavailable"} />
+            <Stat label="Documents extracted" value={summary.concepts.toLocaleString()} delta={live ? "live data" : "unavailable"} />
+            <Stat label="Candidate gaps" value={summary.gaps.toLocaleString()} delta={live ? "live data" : "unavailable"} />
+            <Stat label="Evidence links" value={summary.evidence.toLocaleString()} delta={live ? "live data" : "unavailable"} />
           </section>
 
           <section className="grid-2">
             <div className="panel">
               <div className="panel-head"><div><span className="label">OPPORTUNITIES</span><h3>Research gaps detected</h3></div><button className="text-btn">View all →</button></div>
-              <div className="gap-list">{liveGaps.map((g) => <div className="gap-row" key={g.title}><div className="gap-icon">◈</div><div className="gap-main"><strong>{g.title}</strong><span>{g.type} · {g.evidence} evidence links</span></div><div className="score"><b>{g.score}</b><small>DS</small></div></div>)}</div>
+              <div className="gap-list">{liveGaps.length ? liveGaps.map((g) => <div className="gap-row" key={g.title}><div className="gap-icon">◈</div><div className="gap-main"><strong>{g.title}</strong><span>{g.type} · {g.evidence} evidence links</span></div><div className="score"><b>{g.score}</b><small>DS</small></div></div>) : <p className="muted">{live ? "No research gaps were returned by the API." : "Research gaps will appear when the live API is available."}</p>}</div>
             </div>
 
             <div className="panel">
               <div className="panel-head"><div><span className="label">RESEARCH LANDSCAPE</span><h3>Topic activity</h3></div><span className="muted">2019 — 2025</span></div>
               <div className="chart"><div className="y-labels"><span>High</span><span>Mid</span><span>Low</span></div><div className="bars">{[38,52,44,67,61,78,91].map((h,i)=><div className="bar-wrap" key={i}><div className="bar" style={{height: h + "%"}} /><span>{2019+i}</span></div>)}</div></div>
-              <div className="trend-note"><span className="trend-up">↗ 24%</span> growth in indexed research activity</div>
+              <div className="trend-note">Trend chart is illustrative until live trend data is wired into this chart.</div>
             </div>
           </section>
 
@@ -142,7 +129,7 @@ export default function Home() {
           <section className="grid-2">
             <div className="panel">
               <div className="panel-head"><div><span className="label">PAPER INTELLIGENCE</span><h3>Recently analyzed</h3></div></div>
-              <div className="paper-list">{livePapers.map((p) => <div className="paper" key={p.title}><div className="paper-file">PDF</div><div><strong>{p.title}</strong><span>{p.year} · {p.tags.map(t => <em key={t}>{t}</em>)}</span></div><button>→</button></div>)}</div>
+              <div className="paper-list">{livePapers.length ? livePapers.map((p) => <div className="paper" key={p.title}><div className="paper-file">PDF</div><div><strong>{p.title}</strong><span>{p.year || "Year unavailable"} · {(p.tags || []).map((t:string) => <em key={t}>{t}</em>)}</span></div><button>→</button></div>) : <p className="muted">Live paper-list endpoint is not connected on this dashboard yet.</p>}</div>
             </div>
             <div className="panel opportunity"><span className="label">NEXT DISCOVERY</span><h3>Turn a gap into a hypothesis.</h3><p>Validated gaps can flow into experiment planning, hypothesis generation and evidence-backed research reports.</p><button className="primary">Open Discovery Flow →</button><div className="flow"><span>Gap</span><i>→</i><span>Hypothesis</span><i>→</i><span>Experiment</span></div></div>
           </section>
