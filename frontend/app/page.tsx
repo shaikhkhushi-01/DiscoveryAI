@@ -16,31 +16,47 @@ export default function Home() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://discoveryai-6dmk.onrender.com";
 
   useEffect(() => {
-    if (!apiBase) return;
-    Promise.all([
-      apiGet("/api/v1/public/overview"),
-      apiGet("/api/v1/public/gaps?limit=10"),
-      apiGet("/api/v1/public/trends?limit=20"),
-    ]).then(([overview, g, t]) => {
-      setLive(true);
-      setSummary({
-        papers: overview.papers_indexed ?? 0,
-        concepts: overview.concepts ?? 0,
-        gaps: g.count ?? (g.items || []).length,
-        evidence: overview.evidence_links ?? 0,
+    let cancelled = false;
+
+    // Load each endpoint independently: a trends failure must not hide working
+    // overview/gap data and leave every dashboard metric at zero.
+    apiGet("/api/v1/public/overview")
+      .then((overview) => {
+        if (cancelled) return;
+        setSummary((current) => ({
+          ...current,
+          papers: overview.papers_indexed ?? 0,
+          concepts: overview.concepts ?? 0,
+          evidence: overview.evidence_links ?? 0,
+        }));
+        setLive(true);
+      })
+      .catch(() => {
+        if (!cancelled) setApiError("Could not load overview metrics from the live API.");
       });
-      setLiveGaps((g.items || []).map((x: any) => ({
-        title: x.title,
-        type: x.gap_type || x.type || "Research gap",
-        score: x.discovery_score ?? x.score ?? "—",
-        evidence: x.retrieval_evidence_count ?? x.evidence_count ?? 0
-      })));
-      setApiError("");
-    }).catch(() => {
-      setLive(false);
-      setApiError("Live API data could not be loaded. Metrics are shown as zero until the backend responds; no sample metrics are substituted.");
-    });
-  }, [apiBase]);
+
+    apiGet("/api/v1/public/gaps?limit=10")
+      .then((g) => {
+        if (cancelled) return;
+        setLiveGaps((g.items || []).map((x: any) => ({
+          title: x.title || x.topic || "Untitled research gap",
+          type: x.gap_type || x.type || "Research gap",
+          score: x.discovery_score ?? x.score ?? x.confidence ?? "—",
+          evidence: x.retrieval_evidence_count ?? x.evidence_count ?? 0,
+        })));
+        setSummary((current) => ({ ...current, gaps: g.count ?? (g.items || []).length }));
+        setLive(true);
+      })
+      .catch(() => {
+        if (!cancelled) setApiError("Research-gap data could not be loaded from the live API.");
+      });
+
+    // Trends are not currently rendered from this endpoint, so its failure
+    // should not affect dashboard metrics.
+    apiGet("/api/v1/public/trends?limit=20").catch(() => undefined);
+
+    return () => { cancelled = true; };
+  }, []);
 
   const runSearch = async () => {
     if (!query.trim() || !apiBase) return;
