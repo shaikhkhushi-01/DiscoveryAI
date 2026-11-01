@@ -80,6 +80,32 @@ def _load_payload(document: Document) -> tuple[dict[str, Any], list[dict[str, An
     if not isinstance(chunks, list):
         raise ValueError("Stored document chunks are invalid")
 
+    # Older PDFs may have no recognized section headings, leaving the parser
+    # with zero chunks even though PostgreSQL contains the full extracted text.
+    # Fall back to deterministic overlapping text chunks so vector indexing
+    # does not silently report success with zero vectors.
+    valid_chunks = [
+        chunk for chunk in chunks
+        if isinstance(chunk, dict) and isinstance(chunk.get("text"), str) and chunk["text"].strip()
+    ]
+    if not valid_chunks and (document.extracted_text or "").strip():
+        text = document.extracted_text.strip()
+        chunk_size, overlap = 1200, 150
+        start = 0
+        index = 0
+        while start < len(text):
+            end = min(len(text), start + chunk_size)
+            valid_chunks.append({
+                "chunk_id": f"fulltext-{index}",
+                "section": "full_text",
+                "text": text[start:end],
+            })
+            index += 1
+            if end >= len(text):
+                break
+            start = end - overlap
+    chunks = valid_chunks
+
     paper = document.paper
     year = extraction.get("year") or (paper.publication_date.year if paper and paper.publication_date else None)
     authors = extraction.get("authors") or []
@@ -113,8 +139,7 @@ def _load_payload(document: Document) -> tuple[dict[str, Any], list[dict[str, An
 
 def _index_vectors(chunks: list[dict[str, Any]]) -> int:
     if not chunks:
-        logger.warning("vector indexing skipped because no valid chunks were found")
-        return 0
+        raise ValueError("No indexable text chunks found; refusing to mark vector indexing completed")
     provider = get_embedding_provider()
     total = 0
     for start in range(0, len(chunks), EMBED_BATCH_SIZE):
