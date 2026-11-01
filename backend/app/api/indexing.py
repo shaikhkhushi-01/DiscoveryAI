@@ -58,12 +58,4 @@ def indexing_status(
     job = recover_stale_job(db, document_id)
     if not job:
         raise HTTPException(status_code=404, detail="No indexing job exists for this document")
-    # A recovered retry can be safely re-dispatched by this request's process.
-    if job.status == "retry":
-        job.status = "queued"
-        job.attempts = max(0, job.attempts)
-        job.queued_at = job.updated_at
-        db.commit()
-        # Status polling must remain read-only from the client's perspective;
-        # the regular index endpoint can re-dispatch queued jobs.
     return _job_response(job)
