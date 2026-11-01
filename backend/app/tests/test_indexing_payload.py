@@ -1,7 +1,8 @@
 import unittest
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-from app.services.indexing import _load_payload, _index_vectors
+from app.services.indexing import _load_payload, _index_vectors, _is_job_fresh, STALE_JOB_SECONDS
 
 
 class IndexingPayloadTests(unittest.TestCase):
@@ -28,6 +29,16 @@ class IndexingPayloadTests(unittest.TestCase):
     def test_rejects_empty_chunks_instead_of_reporting_zero_as_success(self):
         with self.assertRaisesRegex(ValueError, "No indexable text chunks"):
             _index_vectors([])
+
+    def test_running_job_is_fresh_before_timeout(self):
+        now = datetime.now(timezone.utc)
+        job = SimpleNamespace(updated_at=now - timedelta(seconds=STALE_JOB_SECONDS - 1))
+        self.assertTrue(_is_job_fresh(job, now))
+
+    def test_running_job_is_stale_after_timeout(self):
+        now = datetime.now(timezone.utc)
+        job = SimpleNamespace(updated_at=now - timedelta(seconds=STALE_JOB_SECONDS + 1))
+        self.assertFalse(_is_job_fresh(job, now))
 
 
 if __name__ == "__main__":
