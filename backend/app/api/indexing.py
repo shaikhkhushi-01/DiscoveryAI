@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.models.document import Document
 from app.models.indexing_job import IndexingJob
 from app.models.user import User
-from app.services.indexing import enqueue_indexing, get_indexing_job, process_job
+from app.services.indexing import enqueue_indexing, get_indexing_job, process_job, recover_stale_job
 
 router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
 
@@ -40,9 +40,9 @@ def queue_indexing(
     job = enqueue_indexing(db, document_id)
     db.commit()
 
-    # There is no separate Render worker in the current deployment.
-    # Run the durable indexing job after the HTTP response is returned.
-    background_tasks.add_task(process_job, job.id)
+    # Avoid launching a duplicate task when an existing job is still active.
+    if job.status == "queued":
+        background_tasks.add_task(process_job, job.id)
 
     return _job_response(job)
 
@@ -55,7 +55,7 @@ def indexing_status(
 ):
     if not db.get(Document, document_id):
         raise HTTPException(status_code=404, detail="Document not found")
-    job = get_indexing_job(db, document_id)
+    job = recover_stale_job(db, document_id)
     if not job:
         raise HTTPException(status_code=404, detail="No indexing job exists for this document")
     return _job_response(job)

@@ -20,17 +20,23 @@ logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 3
 EMBED_BATCH_SIZE = 8
 MAX_ERROR_LENGTH = 4000
+STALE_JOB_SECONDS = 30 * 60
 
 
 def enqueue_indexing(db: Session, document_id: int) -> IndexingJob:
-    job = db.scalar(select(IndexingJob).where(IndexingJob.document_id == document_id))
+    job = db.scalar(
+        select(IndexingJob)
+        .where(IndexingJob.document_id == document_id)
+        .with_for_update()
+    )
     now = datetime.now(timezone.utc)
     if job is None:
         job = IndexingJob(document_id=document_id)
         db.add(job)
     else:
-        # Explicit re-index requests also recover jobs left queued/running after
-        # a web-process restart. The existing unique document_id prevents duplicates.
+        # Never reset a live job: doing so can launch two concurrent indexers.
+        if job.status == "running" and _is_job_fresh(job, now):
+            return job
         job.status = "queued"
         job.attempts = 0
         job.vector_status = "pending"
@@ -40,6 +46,38 @@ def enqueue_indexing(db: Session, document_id: int) -> IndexingJob:
         job.started_at = None
         job.completed_at = None
     db.flush()
+    return job
+
+
+def _is_job_fresh(job: IndexingJob, now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    updated_at = job.updated_at
+    if updated_at is None:
+        return False
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    return (now - updated_at).total_seconds() < STALE_JOB_SECONDS
+
+
+def recover_stale_job(db: Session, document_id: int) -> IndexingJob | None:
+    """Move abandoned running jobs back to the queue after a conservative timeout."""
+    job = db.scalar(
+        select(IndexingJob)
+        .where(IndexingJob.document_id == document_id)
+        .with_for_update()
+    )
+    if job is None or job.status != "running" or _is_job_fresh(job):
+        return job
+    job.status = "retry" if job.attempts < MAX_ATTEMPTS else "failed"
+    job.last_error = (
+        f"Recovered stale indexing job after {STALE_JOB_SECONDS // 60} minutes "
+        "without a heartbeat"
+    )
+    job.updated_at = datetime.now(timezone.utc)
+    if job.status == "failed":
+        job.completed_at = datetime.now(timezone.utc)
+    db.commit()
+    logger.warning("stale indexing job recovered job_id=%s status=%s", job.id, job.status)
     return job
 
 
@@ -80,6 +118,32 @@ def _load_payload(document: Document) -> tuple[dict[str, Any], list[dict[str, An
     if not isinstance(chunks, list):
         raise ValueError("Stored document chunks are invalid")
 
+    # Older PDFs may have no recognized section headings, leaving the parser
+    # with zero chunks even though PostgreSQL contains the full extracted text.
+    # Fall back to deterministic overlapping text chunks so vector indexing
+    # does not silently report success with zero vectors.
+    valid_chunks = [
+        chunk for chunk in chunks
+        if isinstance(chunk, dict) and isinstance(chunk.get("text"), str) and chunk["text"].strip()
+    ]
+    if not valid_chunks and (document.extracted_text or "").strip():
+        text = document.extracted_text.strip()
+        chunk_size, overlap = 1200, 150
+        start = 0
+        index = 0
+        while start < len(text):
+            end = min(len(text), start + chunk_size)
+            valid_chunks.append({
+                "chunk_id": f"fulltext-{index}",
+                "section": "full_text",
+                "text": text[start:end],
+            })
+            index += 1
+            if end >= len(text):
+                break
+            start = end - overlap
+    chunks = valid_chunks
+
     paper = document.paper
     year = extraction.get("year") or (paper.publication_date.year if paper and paper.publication_date else None)
     authors = extraction.get("authors") or []
@@ -113,8 +177,7 @@ def _load_payload(document: Document) -> tuple[dict[str, Any], list[dict[str, An
 
 def _index_vectors(chunks: list[dict[str, Any]]) -> int:
     if not chunks:
-        logger.warning("vector indexing skipped because no valid chunks were found")
-        return 0
+        raise ValueError("No indexable text chunks found; refusing to mark vector indexing completed")
     provider = get_embedding_provider()
     total = 0
     for start in range(0, len(chunks), EMBED_BATCH_SIZE):

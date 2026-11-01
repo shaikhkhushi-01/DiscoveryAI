@@ -16,6 +16,7 @@ def test_discovery_workflow_trace():
         "evidence_validator",
         "trend_agent",
         "research_critic",
+        "hypothesis_agent",
         "report_agent",
     ]
     assert result["report"]["scope"] == "indexed_corpus"
