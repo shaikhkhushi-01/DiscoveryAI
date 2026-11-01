@@ -8,9 +8,9 @@ from app.models.indexing_job import IndexingJob
 from app.models.user import User
 from datetime import datetime, timezone
 
-from app.services.indexing import enqueue_indexing, process_job, recover_stale_job
+from app.services.indexing import enqueue_indexing, process_job, recover_stale_job\nfrom app.services.vector_store import check_qdrant_connection
 
-router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
+router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])\n\n\n@router.get("/qdrant-health", tags=["diagnostics"])\ndef qdrant_health(current_user: User = Depends(get_current_user)):\n    """Read-only Qdrant connectivity check; never returns credentials."""\n    try:\n        return check_qdrant_connection()\n    except Exception as exc:\n        # Return only exception type/message; Qdrant credentials are never included.\n        raise HTTPException(\n            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,\n            detail={"status": "unreachable", "error_type": type(exc).__name__, "message": str(exc)[:500]},\n        ) from exc
 
 
 def _job_response(job: IndexingJob) -> dict:
