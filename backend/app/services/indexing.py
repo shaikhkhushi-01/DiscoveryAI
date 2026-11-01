@@ -210,9 +210,6 @@ def process_job(job_id: int) -> dict[str, Any]:
 
         # Direct BackgroundTasks execution and the standalone worker both use
         # this function. A worker may have already committed the running state.
-        if job.status == "running" and _is_job_fresh(job):
-            logger.warning("duplicate indexing execution ignored job_id=%s", job_id)
-            return {"job_id": job.id, "status": "running", "message": "Job is already active"}
         if job.status in {"queued", "retry"}:
             if job.attempts >= MAX_ATTEMPTS:
                 job.status = "failed"
