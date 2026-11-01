@@ -6,7 +6,9 @@ from app.db.session import get_db
 from app.models.document import Document
 from app.models.indexing_job import IndexingJob
 from app.models.user import User
-from app.services.indexing import enqueue_indexing, get_indexing_job, process_job, recover_stale_job
+from datetime import datetime, timezone
+
+from app.services.indexing import enqueue_indexing, process_job, recover_stale_job
 
 router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
 
@@ -50,6 +52,7 @@ def queue_indexing(
 @router.get("/{document_id}/index-status")
 def indexing_status(
     document_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -58,4 +61,14 @@ def indexing_status(
     job = recover_stale_job(db, document_id)
     if not job:
         raise HTTPException(status_code=404, detail="No indexing job exists for this document")
+
+    # A stale job is recovered as retry. Requeue it here so status polling
+    # actually resumes work instead of leaving the job stranded indefinitely.
+    if job.status == "retry":
+        job.status = "queued"
+        job.queued_at = datetime.now(timezone.utc)
+        job.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        background_tasks.add_task(process_job, job.id)
+
     return _job_response(job)
