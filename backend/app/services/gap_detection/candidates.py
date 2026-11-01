@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any
 
 from app.services.knowledge_graph.neo4j import run
@@ -27,12 +26,13 @@ def _missing_experiments(limit: int = 50) -> list[dict[str, Any]]:
         """
         MATCH (m:Method)
         MATCH (d:Dataset)
-        OPTIONAL MATCH (p:Paper)-[:USES_METHOD]->(m)-[:USES_DATASET]->(d)
+        OPTIONAL MATCH (p:Paper)-[:USES_METHOD]->(m), (p)-[:USES_DATASET]->(d)
         WITH m, d, count(DISTINCT p) AS observed
         WITH m, collect({dataset:d.name, observed:observed}) AS coverage
         WHERE size([x IN coverage WHERE x.observed > 0]) = 1
         RETURN m.name AS method,
                [x IN coverage WHERE x.observed > 0][0].dataset AS observed_dataset,
+               [x IN coverage WHERE x.observed > 0][0].observed AS evidence_count,
                [x IN coverage WHERE x.observed = 0 | x.dataset][0..5] AS candidate_missing_datasets
         LIMIT $limit
         """,
@@ -56,7 +56,7 @@ def generate_graph_candidates(limit: int = 50) -> list[dict[str, Any]]:
             "gap_type": GapType.MISSING_EXPERIMENT.value,
             "title": f"Method-dataset coverage gap: {row.get('method')}",
             "description": f"Indexed evidence shows {row.get('method')} associated with {row.get('observed_dataset')}; candidate missing datasets from the indexed graph include {row.get('candidate_missing_datasets', [])}.",
-            "evidence_count": row.get("papers", 0),
+            "evidence_count": row.get("evidence_count", 0),
             "source": "neo4j_graph",
             "confidence": 0.45,
         })
