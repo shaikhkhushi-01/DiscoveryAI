@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from app.services.indexing import enqueue_indexing, process_job, recover_stale_job
 from app.services.vector_store import check_qdrant_connection
 
-router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])\nqdrant_router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
+router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
+qdrant_router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
 
 
 @qdrant_router.get("/qdrant-health")
