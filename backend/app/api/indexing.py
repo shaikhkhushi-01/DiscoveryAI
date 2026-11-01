@@ -12,9 +12,10 @@ from app.services.indexing import enqueue_indexing, process_job, recover_stale_j
 from app.services.vector_store import check_qdrant_connection
 
 router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
+qdrant_router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
 
 
-@router.get("/qdrant-health", tags=["diagnostics"])
+@qdrant_router.get("/qdrant-health")
 def qdrant_health(current_user: User = Depends(get_current_user)):
     """Read-only Qdrant connectivity check; never returns credentials."""
     try:
