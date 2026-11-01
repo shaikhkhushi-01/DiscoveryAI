@@ -71,7 +71,8 @@ app.include_router(evidence_router)
 app.include_router(trends_router)
 app.include_router(agents_router)
 app.include_router(intelligence_router)
-app.include_router(indexing_router)\napp.include_router(diagnostics_router)
+app.include_router(indexing_router)
+app.include_router(diagnostics_router)
 app.include_router(public_dashboard_router)
 
 
