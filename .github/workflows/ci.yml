@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install backend dependencies
-        run: pip install -r requirements.txt pytest
+        run: pip install -r requirements.txt pytest pytest-asyncio
       - name: Compile Python sources
         run: python -m compileall app
       - name: Run unit tests
