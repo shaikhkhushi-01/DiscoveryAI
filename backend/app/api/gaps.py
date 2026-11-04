@@ -6,6 +6,7 @@ from app.models.user import User
 from app.services.gap_detection.engine import detect_gaps
 from app.services.evidence.engine import score_opportunities
 from app.services.gap_detection.research_critic import critique_research_gap
+from app.services.gap_detection.opportunity_report import build_research_opportunity_report
 
 router = APIRouter(prefix="/api/v1/gaps", tags=["research-gaps"])
 
@@ -32,6 +33,18 @@ async def research_critic(
     current_user: User = Depends(get_current_user),
 ):
     return await critique_research_gap(
+        payload.title,
+        payload.description,
+        payload.limit,
+    )
+
+
+@router.post("/report")
+async def research_opportunity_report(
+    payload: ResearchCriticRequest,
+    current_user: User = Depends(get_current_user),
+):
+    return await build_research_opportunity_report(
         payload.title,
         payload.description,
         payload.limit,
