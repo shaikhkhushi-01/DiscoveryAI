@@ -11,8 +11,8 @@ def score_opportunities(limit: int = 20) -> dict[str, Any]:
     results.sort(key=lambda x: x.get("discovery_score", 0), reverse=True)
     return {
         "scope": "indexed_corpus",
-        "score_version": "v1",
+        "score_version": "v2",
         "items": results[:limit],
         "count": len(results[:limit]),
-        "warning": "Discovery Score is an evidence-based opportunity signal, not proof of global novelty."
+        "warning": "Discovery Score is a heuristic within the indexed corpus; unmeasured dimensions use neutral defaults and it is not proof of global novelty."
     }
