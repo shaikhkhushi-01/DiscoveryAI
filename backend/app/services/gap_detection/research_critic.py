@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from app.services.graph_rag.pipeline import retrieve_graph_rag
@@ -12,6 +13,7 @@ SYSTEM = """Review research-gap claims skeptically. Use only supplied indexed-co
 Never invent citations. Related evidence is not proof that a gap is solved.
 Reject only on direct evidence that this specific gap is already addressed.
 Accept only as plausible within this corpus, never as globally novel.
+Prefer scientific body content over references, bibliographies, acknowledgements, and author-contribution statements.
 Otherwise return review. Output JSON only."""
 
 
@@ -21,39 +23,50 @@ def _valid_ids(value: Any, allowed: set[str]) -> list[str]:
     return list(dict.fromkeys(str(x).strip() for x in value if str(x).strip() in allowed))
 
 
+def _reference_penalty(hit: dict[str, Any]) -> float:
+    section = str(hit.get("section") or "").lower().strip()
+    if section in {"references", "bibliography", "works cited", "acknowledgements", "author contributions"}:
+        return 1.0
+    text = str(hit.get("text") or "")
+    lines = text.splitlines()
+    citation_lines = sum(
+        1 for line in lines
+        if re.search(r"\b(19|20)\d{2}\b", line) and ("," in line or ";" in line)
+    )
+    if text and citation_lines >= 3 and citation_lines / max(1, len(lines)) > 0.5:
+        return 0.35
+    return 0.0
+
+
 async def critique_research_gap(title: str, description: str = "", limit: int = 8) -> dict[str, Any]:
     query = " ".join(x for x in (title.strip(), description.strip()) if x)
     hits = retrieve_graph_rag(query, limit=max(1, min(limit * 2, 20))).get("items", [])
-    def reference_penalty(hit: dict[str, Any]) -> float:
-        section = str(hit.get("section") or "").lower().strip()
-        if section in {"references", "bibliography", "works cited", "acknowledgements", "author contributions"}:
-            return 1.0
-        text = str(hit.get("text") or "")
-        citation_lines = sum(1 for line in text.splitlines() if __import__("re").search(r"\\b(19|20)\\d{2}\\b", line) and ("," in line or ";" in line))
-        return 0.35 if len(text) > 0 and citation_lines >= 3 and citation_lines / max(1, len(text.splitlines())) > 0.5 else 0.0
-    ranked = sorted(hits, key=lambda hit: float(hit.get("graph_rag_score", hit.get("rerank_score", 0)) or 0) - reference_penalty(hit), reverse=True)
-    body_hits = [hit for hit in ranked if reference_penalty(hit) < 0.5]
-    hits = (body_hits or ranked)[:max(1, min(limit, 12))]
+    ranked = sorted(
+        hits,
+        key=lambda hit: float(hit.get("graph_rag_score", hit.get("rerank_score", 0)) or 0) - _reference_penalty(hit),
+        reverse=True,
+    )
+    body_hits = [hit for hit in ranked if _reference_penalty(hit) < 0.5]
+    selected = (body_hits or ranked)[:max(1, min(limit, 12))]
     sources, blocks = [], []
-    for i, hit in enumerate(hits, 1):
+    for i, hit in enumerate(selected, 1):
         eid = f"EVIDENCE {i}"
         excerpt = str(hit.get("text") or "")[:1200]
+        paper_title = hit.get("title") or hit.get("paper_title")
         sources.append({
             "evidence_id": eid, "paper_id": hit.get("paper_id"),
-            "document_id": hit.get("document_id"), "title": hit.get("title") or hit.get("paper_title"),
-            "excerpt": excerpt, "rerank_score": hit.get("rerank_score", 0),
+            "document_id": hit.get("document_id"), "title": paper_title,
+            "section": hit.get("section"), "excerpt": excerpt,
+            "rerank_score": hit.get("rerank_score", 0),
             "semantic_score": hit.get("semantic_score", 0),
             "graph_score": hit.get("graph_score", 0),
         })
-        blocks.append(f"[{eid}] {hit.get('title')} (paper_id={hit.get('paper_id')})\n{excerpt}")
+        blocks.append(f"[{eid}] {paper_title} (paper_id={hit.get('paper_id')}, section={hit.get('section')})\n{excerpt}")
 
-    paper_ids = {x.get("paper_id") for x in hits if x.get("paper_id") is not None}
+    paper_ids = {x.get("paper_id") for x in selected if x.get("paper_id") is not None}
     base = {
-        "mode": "research_critic",
-        "candidate": {"title": title, "description": description},
-        "scope": "indexed_corpus",
-        "distinct_paper_count": len(paper_ids),
-        "sources": sources,
+        "mode": "research_critic", "candidate": {"title": title, "description": description},
+        "scope": "indexed_corpus", "distinct_paper_count": len(paper_ids), "sources": sources,
     }
     limits = [
         "Assessment is limited to papers indexed in DiscoveryAI.",
@@ -85,7 +98,6 @@ Cite only the exact EVIDENCE IDs supplied above.'''
             "evidence_ids": [], "checks": ["No reliable automated verdict was produced."],
             "limitations": limits,
         }
-
     if not isinstance(result, dict):
         logger.error("Research critic returned non-object structured result: %s", type(result).__name__)
         result = {}
