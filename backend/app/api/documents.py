@@ -114,6 +114,44 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
         raise HTTPException(status_code=422, detail=f"Document processing failed: {exc}") from exc
 
 
+@router.post("/{document_id}/extract")
+async def reprocess_scientific_extraction(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Repair extraction metadata for previously parsed documents."""
+    document = db.get(Document, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not document.extracted_text or not document.extracted_text.strip():
+        raise HTTPException(status_code=422, detail="Document has no extracted PDF text")
+
+    try:
+        payload = json.loads(document.metadata_json or "{}")
+        extracted_fields = await ScientificExtractor(get_llm_provider()).extract(document.extracted_text)
+        extraction = build_scientific_extraction(
+            document.extracted_text,
+            payload.get("metadata") or {},
+            extracted_fields,
+            Path(document.storage_uri or "paper.pdf").name,
+            payload.get("sections") or [],
+        )
+        payload["extraction"] = extraction
+        document.metadata_json = json.dumps(payload)
+        paper = db.get(Paper, document.paper_id)
+        if paper:
+            paper.title = extraction["title"]
+            paper.doi = extraction["doi"]
+            paper.abstract = extraction["abstract"]
+            paper.publication_date = date(extraction["year"], 1, 1) if extraction["year"] else None
+        db.commit()
+        return {"document_id": document.id, "paper_id": document.paper_id, "status": "extraction_completed"}
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=f"Scientific extraction failed: {exc}") from exc
+
+
 @router.get("/{document_id}")
 def get_document(document_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     document = db.get(Document, document_id)
