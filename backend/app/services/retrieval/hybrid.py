@@ -46,6 +46,17 @@ def hybrid_search(query: str, *, limit: int = 10, filters: dict[str, Any] | None
             if existing.get("paper_id") == item["paper_id"]:
                 existing["keyword_score"] = item["keyword_score"]
                 existing["paper_id"] = item["paper_id"]
+    missing_ids = {int(x["paper_id"]) for x in by_key.values() if x.get("paper_id") is not None and not (x.get("title") or x.get("paper_title"))}
+    if missing_ids:
+        db = SessionLocal()
+        try:
+            rows = db.query(Paper.id, Paper.title).filter(Paper.id.in_(missing_ids)).all()
+            titles = {int(pid): title for pid, title in rows if title}
+        finally:
+            db.close()
+        for item in by_key.values():
+            if not (item.get("title") or item.get("paper_title")) and item.get("paper_id") is not None:
+                item["title"] = titles.get(int(item["paper_id"]))
     for item in by_key.values():
         item["hybrid_score"] = 0.75 * item.get("semantic_score", 0.0) + 0.25 * item.get("keyword_score", 0.0)
     return sorted(by_key.values(), key=lambda x: x["hybrid_score"], reverse=True)[:limit]
