@@ -23,14 +23,24 @@ def _valid_ids(value: Any, allowed: set[str]) -> list[str]:
 
 async def critique_research_gap(title: str, description: str = "", limit: int = 8) -> dict[str, Any]:
     query = " ".join(x for x in (title.strip(), description.strip()) if x)
-    hits = retrieve_graph_rag(query, limit=max(1, min(limit, 12))).get("items", [])
+    hits = retrieve_graph_rag(query, limit=max(1, min(limit * 2, 20))).get("items", [])
+    def reference_penalty(hit: dict[str, Any]) -> float:
+        section = str(hit.get("section") or "").lower().strip()
+        if section in {"references", "bibliography", "works cited", "acknowledgements", "author contributions"}:
+            return 1.0
+        text = str(hit.get("text") or "")
+        citation_lines = sum(1 for line in text.splitlines() if __import__("re").search(r"\\b(19|20)\\d{2}\\b", line) and ("," in line or ";" in line))
+        return 0.35 if len(text) > 0 and citation_lines >= 3 and citation_lines / max(1, len(text.splitlines())) > 0.5 else 0.0
+    ranked = sorted(hits, key=lambda hit: float(hit.get("graph_rag_score", hit.get("rerank_score", 0)) or 0) - reference_penalty(hit), reverse=True)
+    body_hits = [hit for hit in ranked if reference_penalty(hit) < 0.5]
+    hits = (body_hits or ranked)[:max(1, min(limit, 12))]
     sources, blocks = [], []
     for i, hit in enumerate(hits, 1):
         eid = f"EVIDENCE {i}"
         excerpt = str(hit.get("text") or "")[:1200]
         sources.append({
             "evidence_id": eid, "paper_id": hit.get("paper_id"),
-            "document_id": hit.get("document_id"), "title": hit.get("title"),
+            "document_id": hit.get("document_id"), "title": hit.get("title") or hit.get("paper_title"),
             "excerpt": excerpt, "rerank_score": hit.get("rerank_score", 0),
             "semantic_score": hit.get("semantic_score", 0),
             "graph_score": hit.get("graph_score", 0),
