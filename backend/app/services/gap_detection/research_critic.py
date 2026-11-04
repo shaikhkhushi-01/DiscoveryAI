@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.services.graph_rag.pipeline import retrieve_graph_rag
 from app.services.llm.factory import get_llm_provider
+
+logger = logging.getLogger(__name__)
 
 SYSTEM = """Review research-gap claims skeptically. Use only supplied indexed-corpus evidence.
 Never invent citations. Related evidence is not proof that a gap is solved.
@@ -65,6 +68,7 @@ Cite only the exact EVIDENCE IDs supplied above.'''
     try:
         result = await get_llm_provider().structured(prompt, system=SYSTEM, temperature=0.0)
     except Exception:
+        logger.exception("Research critic LLM assessment failed")
         return {
             **base, "verdict": "review",
             "rationale": "Critic unavailable or returned invalid output; manual review is required.",
@@ -72,6 +76,9 @@ Cite only the exact EVIDENCE IDs supplied above.'''
             "limitations": limits,
         }
 
+    if not isinstance(result, dict):
+        logger.error("Research critic returned non-object structured result: %s", type(result).__name__)
+        result = {}
     verdict = str(result.get("verdict") or "review").lower().strip()
     if verdict not in {"accept", "reject", "review"}:
         verdict = "review"
