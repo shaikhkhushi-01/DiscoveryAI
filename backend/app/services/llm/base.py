@@ -28,6 +28,12 @@ class LLMProvider(ABC):
             except json.JSONDecodeError as exc:
                 raise ValueError("LLM did not return valid JSON") from exc
 
+        # Some Gemini model responses wrap a single structured object in an
+        # array even when application/json is requested. Unwrap only the
+        # unambiguous one-object case; never guess when multiple objects exist.
+        if isinstance(value, list) and len(value) == 1 and isinstance(value[0], dict):
+            value = value[0]
+
         if not isinstance(value, dict):
             raise ValueError("LLM structured response must be a JSON object")
         return value
