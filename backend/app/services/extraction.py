@@ -73,11 +73,24 @@ _PLACEHOLDER_TITLES = {
     "real scientific research pdf", "scientific research pdf",
 }
 
+# PDF text extractors sometimes put publisher permissions, licensing notices,
+# and running headers before the actual title on page one. These are not titles.
+_TITLE_BOILERPLATE = re.compile(
+    r"(google hereby grants permission|provided proper attribution|"
+    r"permission to reproduce|solely for use in|all rights reserved|"
+    r"copyright\s*(?:©|\(c\))?|creative commons|licensed under|"
+    r"arxiv vanity|downloaded from|personal use is permitted|"
+    r"ieee.*copyright|acm.*copyright)",
+    re.IGNORECASE,
+)
+
 
 def is_usable_paper_title(value: str | None, filename: str | None = None) -> bool:
     title = str(value or "").strip()
     normalized = re.sub(r"\s+", " ", title).strip().lower()
     if normalized in _PLACEHOLDER_TITLES or len(title) < 8 or len(title) > 300:
+        return False
+    if _TITLE_BOILERPLATE.search(normalized):
         return False
     if re.fullmatch(r"[0-9a-f]{40,64}", normalized):
         return False
@@ -92,7 +105,7 @@ def is_usable_paper_title(value: str | None, filename: str | None = None) -> boo
 
 
 def infer_paper_title(text: str, metadata_title: str | None = None, filename: str | None = None) -> str:
-    """Prefer meaningful PDF metadata; otherwise infer the title from first-page text."""
+    """Prefer meaningful PDF metadata; otherwise infer a title from first-page text."""
     if is_usable_paper_title(metadata_title, filename):
         return re.sub(r"\s+", " ", str(metadata_title)).strip()
 
@@ -106,14 +119,23 @@ def infer_paper_title(text: str, metadata_title: str | None = None, filename: st
         re.IGNORECASE,
     )
     candidates: list[str] = []
-    for line in lines[:24]:
+    for line in lines[:40]:
         line = re.sub(r"^\s*(?:\d+\s*)$", "", line).strip()
-        if not line or len(line) < 8 or len(line) > 180 or ignored.search(line):
+        if (
+            not line
+            or len(line) < 8
+            or len(line) > 180
+            or ignored.search(line)
+            or _TITLE_BOILERPLATE.search(line)
+        ):
             continue
         if re.fullmatch(r"[-_=*\W]+", line):
             continue
         # Author lists and affiliations generally contain commas or email-like tokens.
-        if len(candidates) and (line.count(",") >= 1 or re.search(r"\b(author|authors)\b", line, re.I)):
+        if candidates and (
+            line.count(",") >= 1
+            or re.search(r"\b(author|authors)\b", line, re.I)
+        ):
             break
         candidates.append(line)
         if len(candidates) >= 3 or line.endswith((".", "?", "!")):
