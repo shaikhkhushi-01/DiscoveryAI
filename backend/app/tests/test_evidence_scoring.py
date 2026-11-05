@@ -12,7 +12,7 @@ def test_discovery_score_is_bounded():
         "cross_domain_signal": 0.9
     })
     assert 0 <= result["discovery_score"] <= 100
-    assert result["score_version"] == "v1"
+    assert result["score_version"] == "v2"
 
 def test_clamp_handles_extremes():
     from app.services.evidence.scoring import clamp
