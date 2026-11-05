@@ -5,13 +5,14 @@ from typing import Any
 
 
 def fuse(vector_items: list[dict[str, Any]], graph_items: list[dict[str, Any]], limit: int = 10) -> list[dict[str, Any]]:
-    grouped: dict[int, dict[str, Any]] = defaultdict(dict)
+    grouped: dict[tuple[Any, Any, Any], dict[str, Any]] = defaultdict(dict)
 
     for item in vector_items:
         paper_id = item.get("paper_id")
         if paper_id is None:
             continue
-        grouped[paper_id].update({
+        key = (paper_id, item.get("document_id"), item.get("chunk_id"))
+        grouped[key].update({
             "paper_id": paper_id,
             "document_id": item.get("document_id"),
             "chunk_id": item.get("chunk_id"),
@@ -33,7 +34,8 @@ def fuse(vector_items: list[dict[str, Any]], graph_items: list[dict[str, Any]], 
             if name and name not in graph_names[pid]:
                 graph_names[pid].append(name)
 
-    for pid, item in grouped.items():
+    for item in grouped.values():
+        pid = item["paper_id"]
         item["graph_score"] = min(1.0, graph_counts[pid] / 5.0)
         item["graph_entities"] = graph_names[pid][:10]
         item["graph_rag_score"] = (

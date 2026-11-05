@@ -56,13 +56,39 @@ proposed_experiments [{{hypothesis, method, possible_measurements (JSON array of
 confidence (low|moderate|high); limitations (array).
 Directions and experiments are proposals, not findings. Cite only supplied evidence IDs.
 Do not use high confidence when fewer than three distinct papers support the report.'''
-    try:
-        result = await get_llm_provider().structured(prompt, system=SYSTEM, temperature=0.1)
-    except Exception:
-        logger.exception("Research opportunity report generation failed")
-        result = {}
-    if not isinstance(result, dict):
-        result = {}
+    generation_error = None
+    result: dict[str, Any] = {}
+    provider = get_llm_provider()
+    required_lists = ("evidence_synthesis", "research_directions", "proposed_experiments")
+    for attempt in range(2):
+        try:
+            result = await provider.structured(
+                prompt if attempt == 0 else (
+                    prompt + "\nYour previous response omitted required report sections. "
+                    "Return at least one evidence-grounded item in each list where evidence permits; "
+                    "if evidence truly does not support a section, explain that in limitations."
+                ),
+                system=SYSTEM,
+                temperature=0.0 if attempt else 0.1,
+            )
+            if not isinstance(result, dict):
+                raise ValueError("Report generator returned a non-object JSON response")
+            if not str(result.get("executive_summary") or "").strip():
+                raise ValueError("Report generator omitted executive_summary")
+            if any(
+                not isinstance(result.get(key), list)
+                or not any(isinstance(item, dict) for item in result.get(key, []))
+                for key in required_lists
+            ):
+                raise ValueError("Report generator omitted or malformed one or more required report sections")
+            generation_error = None
+            break
+        except Exception as exc:
+            generation_error = str(exc)
+            logger.exception("Research opportunity report generation failed (attempt %s)", attempt + 1)
+            result = {}
+    if generation_error:
+        logger.error("Research opportunity report generation exhausted retries: %s", generation_error)
 
     def clean(key: str, fields: tuple[str, ...]) -> list[dict[str, Any]]:
         values = result.get(key)
@@ -79,7 +105,7 @@ Do not use high confidence when fewer than three distinct papers support the rep
                 else:
                     record[field] = str(value.get(field) or "").strip()
             record["evidence_ids"] = _valid_ids(value.get("evidence_ids"), allowed)
-            if any(record[field] for field in fields):
+            if any(record[field] for field in fields) and record["evidence_ids"]:
                 output.append(record)
         return output
 
@@ -88,14 +114,28 @@ Do not use high confidence when fewer than three distinct papers support the rep
         confidence = "low"
     if critic.get("distinct_paper_count", 0) < 3 and confidence == "high":
         confidence = "moderate"
+    evidence_synthesis = clean("evidence_synthesis", ("claim", "interpretation"))
+    research_directions = clean("research_directions", ("direction", "rationale"))
+    proposed_experiments = clean("proposed_experiments", ("hypothesis", "method", "possible_measurements"))
+    if not (evidence_synthesis and research_directions and proposed_experiments):
+        generation_error = generation_error or "One or more report sections contained no valid evidence-cited items"
     limitations = result.get("limitations") if isinstance(result.get("limitations"), list) else []
     return {
         **base,
         "executive_summary": str(result.get("executive_summary") or critic.get("rationale") or "Evidence is inconclusive."),
-        "evidence_synthesis": clean("evidence_synthesis", ("claim", "interpretation")),
-        "research_directions": clean("research_directions", ("direction", "rationale")),
-        "proposed_experiments": clean("proposed_experiments", ("hypothesis", "method", "possible_measurements")),
+        "evidence_synthesis": evidence_synthesis,
+        "research_directions": research_directions,
+        "proposed_experiments": proposed_experiments,
         "confidence": confidence,
-        "limitations": list(dict.fromkeys([str(x) for x in limitations] + critic.get("limitations", []))),
+        "report_generation_status": "completed" if not generation_error else "incomplete",
+        "report_generation_note": (
+            "All report sections contain validated evidence citations."
+            if not generation_error else
+            "The report model did not return all required evidence-cited sections after one retry; no unsupported sections were fabricated."
+        ),
+        "limitations": list(dict.fromkeys(
+            [str(x) for x in limitations] + critic.get("limitations", []) +
+            ([f"Report generation incomplete: {generation_error[:240]}"] if generation_error else [])
+        )),
         "proposal_disclaimer": "AI-generated directions and experiments are proposals requiring expert review, not findings established by cited papers.",
     }
