@@ -124,7 +124,7 @@ async def critique_research_gap(title: str, description: str = "", limit: int = 
         "mode": "research_critic", "candidate": {"title": title, "description": description},
         "scope": "indexed_corpus", "distinct_paper_count": len(paper_ids),
         "coverage": {
-            "indexed_paper_count": indexed_count,
+            "registered_paper_count": indexed_count,
             "retrieved_distinct_paper_count": len(paper_ids),
             "retrieval_candidate_pool": retrieval_limit,
             "coverage_is_global": False,
@@ -134,7 +134,7 @@ async def critique_research_gap(title: str, description: str = "", limit: int = 
     limits = [
         "Assessment is limited to papers indexed in DiscoveryAI.",
         "Sparse corpus coverage cannot establish global research novelty.",
-        f"Retrieved {len(paper_ids)} distinct papers from {indexed_count} papers registered in this corpus.",
+        f"Retrieved {len(paper_ids)} distinct papers; {indexed_count} paper records are registered (not all are necessarily indexed).",
     ]
     if len(paper_ids) < 2:
         return {
