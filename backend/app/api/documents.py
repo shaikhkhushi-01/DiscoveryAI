@@ -12,7 +12,7 @@ from app.models.document import Document
 from app.models.paper import Paper
 from app.models.user import User
 from app.services.document_ingestion import DocumentIngestionError, checksum, process_pdf, store_pdf, validate_pdf
-from app.services.extraction import ScientificExtractor
+from app.services.extraction import ScientificExtractor, infer_paper_title
 from app.services.llm.factory import get_llm_provider
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
@@ -28,7 +28,7 @@ def build_scientific_extraction(
 ) -> dict:
     """Combine LLM-extracted scientific fields with deterministic PDF metadata."""
     raw_title = str(pdf_metadata.get("title") or "").strip()
-    title = raw_title if raw_title and raw_title.lower() not in {"untitled", "unknown"} else Path(filename).stem
+    title = infer_paper_title(text, raw_title, filename)
 
     raw_authors = str(pdf_metadata.get("author") or "").strip()
     authors = [author.strip() for author in re.split(r"\s*;\s*", raw_authors) if author.strip()]
