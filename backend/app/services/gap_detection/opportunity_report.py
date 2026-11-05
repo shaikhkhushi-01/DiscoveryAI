@@ -114,19 +114,24 @@ Do not use high confidence when fewer than three distinct papers support the rep
         confidence = "low"
     if critic.get("distinct_paper_count", 0) < 3 and confidence == "high":
         confidence = "moderate"
+    evidence_synthesis = clean("evidence_synthesis", ("claim", "interpretation"))
+    research_directions = clean("research_directions", ("direction", "rationale"))
+    proposed_experiments = clean("proposed_experiments", ("hypothesis", "method", "possible_measurements"))
+    if not (evidence_synthesis and research_directions and proposed_experiments):
+        generation_error = generation_error or "One or more report sections contained no valid evidence-cited items"
     limitations = result.get("limitations") if isinstance(result.get("limitations"), list) else []
     return {
         **base,
         "executive_summary": str(result.get("executive_summary") or critic.get("rationale") or "Evidence is inconclusive."),
-        "evidence_synthesis": clean("evidence_synthesis", ("claim", "interpretation")),
-        "research_directions": clean("research_directions", ("direction", "rationale")),
-        "proposed_experiments": clean("proposed_experiments", ("hypothesis", "method", "possible_measurements")),
+        "evidence_synthesis": evidence_synthesis,
+        "research_directions": research_directions,
+        "proposed_experiments": proposed_experiments,
         "confidence": confidence,
         "report_generation_status": "completed" if not generation_error else "incomplete",
         "report_generation_note": (
-            "Report sections were generated from retrieved evidence."
+            "All report sections contain validated evidence citations."
             if not generation_error else
-            "The report model did not return a valid complete structure after one retry; no unsupported sections were fabricated."
+            "The report model did not return all required evidence-cited sections after one retry; no unsupported sections were fabricated."
         ),
         "limitations": list(dict.fromkeys(
             [str(x) for x in limitations] + critic.get("limitations", []) +
