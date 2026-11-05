@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+from sqlalchemy import func
 
 from app.db.session import SessionLocal
 from app.models.paper import Paper
@@ -44,6 +45,17 @@ def _reference_penalty(hit: dict[str, Any]) -> float:
     return 0.0
 
 
+def _indexed_corpus_count() -> int:
+    db = SessionLocal()
+    try:
+        return int(db.query(func.count(Paper.id)).scalar() or 0)
+    except Exception:
+        logger.exception("Could not count indexed paper records")
+        return 0
+    finally:
+        db.close()
+
+
 def _canonical_paper_titles(paper_ids: set[int]) -> dict[int, str]:
     if not paper_ids:
         return {}
@@ -60,14 +72,34 @@ def _canonical_paper_titles(paper_ids: set[int]) -> dict[int, str]:
 
 async def critique_research_gap(title: str, description: str = "", limit: int = 8) -> dict[str, Any]:
     query = " ".join(x for x in (title.strip(), description.strip()) if x)
-    hits = retrieve_graph_rag(query, limit=max(1, min(limit * 2, 20))).get("items", [])
+    # Retrieve a wider candidate pool, then diversify by paper so one paper's
+    # many chunks cannot crowd out independent literature.
+    retrieval_limit = max(24, min(limit * 4, 48))
+    hits = retrieve_graph_rag(query, limit=retrieval_limit).get("items", [])
     ranked = sorted(
         hits,
         key=lambda hit: float(hit.get("graph_rag_score", hit.get("rerank_score", 0)) or 0) - _reference_penalty(hit),
         reverse=True,
     )
     body_hits = [hit for hit in ranked if _reference_penalty(hit) < 0.5]
-    selected = (body_hits or ranked)[:max(1, min(limit, 12))]
+    pool = body_hits or ranked
+    selected = []
+    seen_papers: set[int] = set()
+    max_papers = max(1, min(limit, 12))
+    for hit in pool:
+        pid = hit.get("paper_id")
+        if pid is None:
+            continue
+        try:
+            pid = int(pid)
+        except (TypeError, ValueError):
+            continue
+        if pid in seen_papers:
+            continue
+        seen_papers.add(pid)
+        selected.append(hit)
+        if len(selected) >= max_papers:
+            break
     paper_ids = {int(hit["paper_id"]) for hit in selected if hit.get("paper_id") is not None}
     canonical_titles = _canonical_paper_titles(paper_ids)
     sources, blocks = [], []
@@ -87,13 +119,22 @@ async def critique_research_gap(title: str, description: str = "", limit: int = 
         })
         blocks.append(f"[{eid}] {paper_title} (paper_id={paper_id}, section={hit.get('section')})\n{excerpt}")
 
+    indexed_count = _indexed_corpus_count()
     base = {
         "mode": "research_critic", "candidate": {"title": title, "description": description},
-        "scope": "indexed_corpus", "distinct_paper_count": len(paper_ids), "sources": sources,
+        "scope": "indexed_corpus", "distinct_paper_count": len(paper_ids),
+        "coverage": {
+            "indexed_paper_count": indexed_count,
+            "retrieved_distinct_paper_count": len(paper_ids),
+            "retrieval_candidate_pool": retrieval_limit,
+            "coverage_is_global": False,
+        },
+        "sources": sources,
     }
     limits = [
         "Assessment is limited to papers indexed in DiscoveryAI.",
         "Sparse corpus coverage cannot establish global research novelty.",
+        f"Retrieved {len(paper_ids)} distinct papers from {indexed_count} papers registered in this corpus.",
     ]
     if len(paper_ids) < 2:
         return {
