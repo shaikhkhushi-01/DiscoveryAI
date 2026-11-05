@@ -37,7 +37,7 @@ def test_fusion_preserves_source_section_and_chunk_metadata():
 
 def test_placeholder_pdf_metadata_does_not_override_scientific_title():
     assert infer_paper_title(
-        "Attention Is All You Need\\n\\nAshish Vaswani, Noam Shazeer\\n\\nAbstract\\nWe propose...",
+        "Attention Is All You Need\n\nAshish Vaswani, Noam Shazeer\n\nAbstract\nWe propose...",
         "real scientific research PDF",
         "5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e.pdf",
     ) == "Attention Is All You Need"
