@@ -77,7 +77,7 @@ Do not use high confidence when fewer than three distinct papers support the rep
                 raise ValueError("Report generator omitted executive_summary")
             if any(not isinstance(result.get(key), list) for key in required_lists):
                 raise ValueError("Report generator omitted one or more required report arrays")
-            if not any(result.get(key) for key in required_lists) and attempt == 0:
+            if not any(result.get(key) for key in required_lists):
                 raise ValueError("Report generator returned empty report sections")
             generation_error = None
             break
