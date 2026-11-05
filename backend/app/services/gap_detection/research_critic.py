@@ -73,17 +73,22 @@ def _canonical_paper_titles(paper_ids: set[int]) -> dict[int, str]:
         )
         titles: dict[int, str] = {}
         for pid, stored_title, extracted_text, metadata_json, storage_uri in rows:
-            title = str(stored_title or "").strip()
-            if not is_usable_paper_title(title):
+            # The persisted Paper.title may contain publisher boilerplate or
+            # author names from older extraction runs. Re-infer from the PDF's
+            # first-page text first; the title line is separated from author
+            # lines by the extractor's author/affiliation heuristics.
+            filename = Path(storage_uri or "paper.pdf").name
+            inferred = infer_paper_title(extracted_text or "", None, filename)
+            title = inferred if is_usable_paper_title(inferred, filename) else ""
+            if not title:
+                title = str(stored_title or "").strip()
+            if not is_usable_paper_title(title, filename):
                 try:
                     metadata = json.loads(metadata_json or "{}")
                 except (TypeError, ValueError):
                     metadata = {}
-                title = infer_paper_title(
-                    extracted_text or "",
-                    (metadata.get("metadata") or {}).get("title"),
-                    Path(storage_uri or "paper.pdf").name,
-                )
+                metadata_title = (metadata.get("metadata") or {}).get("title")
+                title = infer_paper_title("", metadata_title, filename)
             if title:
                 titles[int(pid)] = title
         return titles
