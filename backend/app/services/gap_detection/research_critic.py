@@ -4,17 +4,23 @@ import logging
 import re
 from typing import Any
 
+from app.db.session import SessionLocal
+from app.models.paper import Paper
 from app.services.graph_rag.pipeline import retrieve_graph_rag
 from app.services.llm.factory import get_llm_provider
 
 logger = logging.getLogger(__name__)
 
-SYSTEM = """Review research-gap claims skeptically. Use only supplied indexed-corpus evidence.
-Never invent citations. Related evidence is not proof that a gap is solved.
-Reject only on direct evidence that this specific gap is already addressed.
-Accept only as plausible within this corpus, never as globally novel.
-Prefer scientific body content over references, bibliographies, acknowledgements, and author-contribution statements.
-Otherwise return review. Output JSON only."""
+SYSTEM = """Review research-gap claims skeptically using only supplied indexed-corpus evidence.
+Accept means the candidate is a plausible, specifically supported research opportunity in this corpus;
+it does NOT mean the gap is proven globally novel. Accept only when evidence directly engages with
+the candidate's specific task, setting, and claimed limitation or opportunity. General descriptions
+of an architecture, broad claims such as modelling dependencies regardless of distance, and evidence
+about an adjacent task are not enough to accept a narrowly framed efficiency or long-context gap.
+Reject only when direct evidence demonstrates that this specific gap is already addressed.
+Use review when evidence is related but does not establish the specific claim either way.
+Never invent citations. Prefer scientific body content over references, bibliographies, acknowledgements,
+and author-contribution statements. Output JSON only."""
 
 
 def _valid_ids(value: Any, allowed: set[str]) -> list[str]:
@@ -38,6 +44,20 @@ def _reference_penalty(hit: dict[str, Any]) -> float:
     return 0.0
 
 
+def _canonical_paper_titles(paper_ids: set[int]) -> dict[int, str]:
+    if not paper_ids:
+        return {}
+    db = SessionLocal()
+    try:
+        rows = db.query(Paper.id, Paper.title).filter(Paper.id.in_(paper_ids)).all()
+        return {int(pid): str(title) for pid, title in rows if title}
+    except Exception:
+        logger.exception("Could not hydrate canonical paper titles for research critic")
+        return {}
+    finally:
+        db.close()
+
+
 async def critique_research_gap(title: str, description: str = "", limit: int = 8) -> dict[str, Any]:
     query = " ".join(x for x in (title.strip(), description.strip()) if x)
     hits = retrieve_graph_rag(query, limit=max(1, min(limit * 2, 20))).get("items", [])
@@ -48,22 +68,25 @@ async def critique_research_gap(title: str, description: str = "", limit: int = 
     )
     body_hits = [hit for hit in ranked if _reference_penalty(hit) < 0.5]
     selected = (body_hits or ranked)[:max(1, min(limit, 12))]
+    paper_ids = {int(hit["paper_id"]) for hit in selected if hit.get("paper_id") is not None}
+    canonical_titles = _canonical_paper_titles(paper_ids)
     sources, blocks = [], []
     for i, hit in enumerate(selected, 1):
         eid = f"EVIDENCE {i}"
         excerpt = str(hit.get("text") or "")[:1200]
-        paper_title = hit.get("title") or hit.get("paper_title")
+        paper_id = hit.get("paper_id")
+        paper_title = canonical_titles.get(int(paper_id)) if paper_id is not None else None
+        paper_title = paper_title or hit.get("title") or hit.get("paper_title")
         sources.append({
-            "evidence_id": eid, "paper_id": hit.get("paper_id"),
-            "document_id": hit.get("document_id"), "title": paper_title,
-            "section": hit.get("section"), "excerpt": excerpt,
+            "evidence_id": eid, "paper_id": paper_id,
+            "document_id": hit.get("document_id"), "chunk_id": hit.get("chunk_id"),
+            "title": paper_title, "section": hit.get("section"), "excerpt": excerpt,
             "rerank_score": hit.get("rerank_score", 0),
             "semantic_score": hit.get("semantic_score", 0),
             "graph_score": hit.get("graph_score", 0),
         })
-        blocks.append(f"[{eid}] {paper_title} (paper_id={hit.get('paper_id')}, section={hit.get('section')})\n{excerpt}")
+        blocks.append(f"[{eid}] {paper_title} (paper_id={paper_id}, section={hit.get('section')})\n{excerpt}")
 
-    paper_ids = {x.get("paper_id") for x in selected if x.get("paper_id") is not None}
     base = {
         "mode": "research_critic", "candidate": {"title": title, "description": description},
         "scope": "indexed_corpus", "distinct_paper_count": len(paper_ids), "sources": sources,
@@ -85,9 +108,10 @@ Description: {description}
 Evidence:
 {chr(10).join(blocks)}
 Return JSON with keys verdict (accept|reject|review), rationale, evidence_ids, checks, limitations.
-Reject only if direct evidence shows this specific gap is already addressed.
-Accept only as plausible within this corpus. Review ambiguous cases.
-Cite only the exact EVIDENCE IDs supplied above.'''
+For accept, the evidence must directly engage with this candidate's specific task, setting, and claimed
+limitation/opportunity. A general architecture capability or adjacent task is insufficient; choose review.
+For reject, direct evidence must demonstrate this exact gap is already addressed.
+If the evidence is merely related, choose review. Cite only exact EVIDENCE IDs supplied above.'''
     try:
         result = await get_llm_provider().structured(prompt, system=SYSTEM, temperature=0.0)
     except Exception:
