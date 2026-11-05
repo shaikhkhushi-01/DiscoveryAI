@@ -58,3 +58,34 @@ def test_fusion_keeps_multiple_chunks_from_the_same_paper():
     )
     assert len(items) == 2
     assert {item["chunk_id"] for item in items} == {"intro-1", "methods-2"}
+
+
+
+def test_existing_placeholder_paper_title_can_be_recovered_from_document_text():
+    from app.services.gap_detection.research_critic import _canonical_paper_titles
+    from app.models.paper import Paper
+    from app.models.document import Document
+    from app.db.session import SessionLocal
+    from unittest.mock import patch
+
+    class FakeQuery:
+        def join(self, *args, **kwargs):
+            return self
+        def filter(self, *args, **kwargs):
+            return self
+        def all(self):
+            return [(
+                42,
+                "real scientific research PDF",
+                "Attention Is All You Need\\n\\nAshish Vaswani, Noam Shazeer\\n\\nAbstract\\nWe propose...",
+                '{"metadata":{"title":"real scientific research PDF"}}',
+                "/papers/5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e.pdf",
+            )]
+    class FakeSession:
+        def query(self, *args):
+            return FakeQuery()
+        def close(self):
+            pass
+
+    with patch("app.services.gap_detection.research_critic.SessionLocal", return_value=FakeSession()):
+        assert _canonical_paper_titles({42})[42] == "Attention Is All You Need"
