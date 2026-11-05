@@ -1,6 +1,22 @@
+import asyncio
+import random
+
 import httpx
+
 from app.core.config import settings
 from app.services.llm.base import LLMProvider
+
+
+RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504}
+
+
+class GeminiUpstreamError(RuntimeError):
+    """Sanitized Gemini API failure; deliberately excludes request URLs and secrets."""
+
+    def __init__(self, status_code: int | None, message: str = "Gemini service is temporarily unavailable"):
+        self.status_code = status_code
+        self.retryable = status_code in RETRYABLE_STATUS_CODES or status_code is None
+        super().__init__(message)
 
 
 class GeminiProvider(LLMProvider):
@@ -11,6 +27,7 @@ class GeminiProvider(LLMProvider):
             raise ValueError("GEMINI_API_KEY is required for GeminiProvider")
         self.api_key = key
         self.base_url = settings.gemini_base_url.rstrip("/")
+        self.max_attempts = 4
 
     async def generate(
         self,
@@ -32,10 +49,34 @@ class GeminiProvider(LLMProvider):
             },
         }
         url = f"{self.base_url}/models/{self.model}:generateContent"
+
         async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(url, params={"key": self.api_key}, json=payload)
-            response.raise_for_status()
-            data = response.json()
+            for attempt in range(self.max_attempts):
+                try:
+                    response = await client.post(url, params={"key": self.api_key}, json=payload)
+                    if response.status_code in RETRYABLE_STATUS_CODES:
+                        if attempt == self.max_attempts - 1:
+                            raise GeminiUpstreamError(response.status_code)
+                        retry_after = response.headers.get("Retry-After")
+                        try:
+                            delay = min(30.0, max(0.0, float(retry_after))) if retry_after else 0.0
+                        except ValueError:
+                            delay = 0.0
+                        if delay == 0.0:
+                            delay = min(8.0, 0.75 * (2 ** attempt)) + random.uniform(0.0, 0.25)
+                        await asyncio.sleep(delay)
+                        continue
+                    if response.is_error:
+                        raise GeminiUpstreamError(response.status_code, "Gemini API rejected the request")
+                    data = response.json()
+                    break
+                except (httpx.TimeoutException, httpx.TransportError):
+                    if attempt == self.max_attempts - 1:
+                        raise GeminiUpstreamError(None) from None
+                    delay = min(8.0, 0.75 * (2 ** attempt)) + random.uniform(0.0, 0.25)
+                    await asyncio.sleep(delay)
+            else:
+                raise GeminiUpstreamError(None)
 
         candidates = data.get("candidates") or []
         if not candidates:
