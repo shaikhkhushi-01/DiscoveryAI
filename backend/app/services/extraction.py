@@ -113,7 +113,7 @@ def infer_paper_title(text: str, metadata_title: str | None = None, filename: st
         if re.fullmatch(r"[-_=*\W]+", line):
             continue
         # Author lists and affiliations generally contain commas or email-like tokens.
-        if len(candidates) and (line.count(",") >= 2 or re.search(r"\b(author|authors)\b", line, re.I)):
+        if len(candidates) and (line.count(",") >= 1 or re.search(r"\b(author|authors)\b", line, re.I)):
             break
         candidates.append(line)
         if len(candidates) >= 3 or line.endswith((".", "?", "!")):
