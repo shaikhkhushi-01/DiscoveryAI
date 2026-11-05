@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import logging
 import re
+import json
+from pathlib import Path
 from typing import Any
 from sqlalchemy import func
 
 from app.db.session import SessionLocal
 from app.models.paper import Paper
+from app.models.document import Document
+from app.services.extraction import infer_paper_title, is_usable_paper_title
 from app.services.graph_rag.pipeline import retrieve_graph_rag
 from app.services.llm.factory import get_llm_provider
 
@@ -61,8 +65,28 @@ def _canonical_paper_titles(paper_ids: set[int]) -> dict[int, str]:
         return {}
     db = SessionLocal()
     try:
-        rows = db.query(Paper.id, Paper.title).filter(Paper.id.in_(paper_ids)).all()
-        return {int(pid): str(title) for pid, title in rows if title}
+        rows = (
+            db.query(Paper.id, Paper.title, Document.extracted_text, Document.metadata_json, Document.storage_uri)
+            .join(Document, Document.paper_id == Paper.id)
+            .filter(Paper.id.in_(paper_ids))
+            .all()
+        )
+        titles: dict[int, str] = {}
+        for pid, stored_title, extracted_text, metadata_json, storage_uri in rows:
+            title = str(stored_title or "").strip()
+            if not is_usable_paper_title(title):
+                try:
+                    metadata = json.loads(metadata_json or "{}")
+                except (TypeError, ValueError):
+                    metadata = {}
+                title = infer_paper_title(
+                    extracted_text or "",
+                    (metadata.get("metadata") or {}).get("title"),
+                    Path(storage_uri or "paper.pdf").name,
+                )
+            if title:
+                titles[int(pid)] = title
+        return titles
     except Exception:
         logger.exception("Could not hydrate canonical paper titles for research critic")
         return {}
