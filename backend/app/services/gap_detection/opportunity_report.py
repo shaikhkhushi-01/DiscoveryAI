@@ -75,10 +75,12 @@ Do not use high confidence when fewer than three distinct papers support the rep
                 raise ValueError("Report generator returned a non-object JSON response")
             if not str(result.get("executive_summary") or "").strip():
                 raise ValueError("Report generator omitted executive_summary")
-            if any(not isinstance(result.get(key), list) for key in required_lists):
-                raise ValueError("Report generator omitted one or more required report arrays")
-            if not any(result.get(key) for key in required_lists):
-                raise ValueError("Report generator returned empty report sections")
+            if any(
+                not isinstance(result.get(key), list)
+                or not any(isinstance(item, dict) for item in result.get(key, []))
+                for key in required_lists
+            ):
+                raise ValueError("Report generator omitted or malformed one or more required report sections")
             generation_error = None
             break
         except Exception as exc:
@@ -103,7 +105,7 @@ Do not use high confidence when fewer than three distinct papers support the rep
                 else:
                     record[field] = str(value.get(field) or "").strip()
             record["evidence_ids"] = _valid_ids(value.get("evidence_ids"), allowed)
-            if any(record[field] for field in fields):
+            if any(record[field] for field in fields) and record["evidence_ids"]:
                 output.append(record)
         return output
 
