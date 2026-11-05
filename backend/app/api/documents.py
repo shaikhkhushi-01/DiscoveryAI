@@ -14,6 +14,7 @@ from app.models.user import User
 from app.services.document_ingestion import DocumentIngestionError, checksum, process_pdf, store_pdf, validate_pdf
 from app.services.extraction import ScientificExtractor, infer_paper_title
 from app.services.llm.factory import get_llm_provider
+from app.services.llm.gemini import GeminiUpstreamError
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 STORAGE_ROOT = Path("data/raw/papers")
@@ -147,6 +148,17 @@ async def reprocess_scientific_extraction(
             paper.publication_date = date(extraction["year"], 1, 1) if extraction["year"] else None
         db.commit()
         return {"document_id": document.id, "paper_id": document.paper_id, "status": "extraction_completed"}
+    except GeminiUpstreamError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "llm_provider_unavailable",
+                "message": str(exc),
+                "retryable": True,
+            },
+            headers={"Retry-After": "30"},
+        ) from None
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=f"Scientific extraction failed: {exc}") from exc
