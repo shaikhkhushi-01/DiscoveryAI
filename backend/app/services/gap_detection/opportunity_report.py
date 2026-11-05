@@ -64,7 +64,7 @@ Do not use high confidence when fewer than three distinct papers support the rep
         try:
             result = await provider.structured(
                 prompt if attempt == 0 else (
-                    prompt + "\\nYour previous response omitted required report sections. "
+                    prompt + "\nYour previous response omitted required report sections. "
                     "Return at least one evidence-grounded item in each list where evidence permits; "
                     "if evidence truly does not support a section, explain that in limitations."
                 ),
