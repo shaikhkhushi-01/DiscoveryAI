@@ -110,3 +110,48 @@ def test_existing_placeholder_paper_title_can_be_recovered_from_document_text():
 
     with patch("app.services.gap_detection.research_critic.SessionLocal", return_value=FakeSession()):
         assert _canonical_paper_titles({42})[42] == "Attention Is All You Need"
+
+
+def test_critic_title_recovery_prefers_clean_pdf_title_over_stale_stored_title():
+    from app.services.gap_detection.research_critic import _canonical_paper_titles
+    from unittest.mock import patch
+
+    class FakeQuery:
+        def join(self, *args, **kwargs):
+            return self
+        def filter(self, *args, **kwargs):
+            return self
+        def all(self):
+            return [
+                (
+                    1,
+                    "scholarly works.",
+                    "Provided proper attribution is provided, Google hereby grants permission "
+                    "to reproduce the tables and figures in this paper solely for use in "
+                    "journalistic or scholarly works.\\nAttention Is All You Need\\n"
+                    "Ashish Vaswani, Noam Shazeer, Niki Parmar\\nAbstract\\nWe propose...",
+                    '{"metadata":{"title":"scholarly works."}}',
+                    "/papers/attention.pdf",
+                ),
+                (
+                    2,
+                    "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding Jacob Devlin",
+                    "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\\n"
+                    "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova\\n"
+                    "Abstract\\nWe introduce BERT...",
+                    '{"metadata":{"title":"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"}}',
+                    "/papers/bert.pdf",
+                ),
+            ]
+
+    class FakeSession:
+        def query(self, *args):
+            return FakeQuery()
+        def close(self):
+            pass
+
+    with patch("app.services.gap_detection.research_critic.SessionLocal", return_value=FakeSession()):
+        titles = _canonical_paper_titles({1, 2})
+
+    assert titles[1] == "Attention Is All You Need"
+    assert titles[2] == "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"
