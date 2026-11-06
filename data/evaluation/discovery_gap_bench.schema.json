@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://discoveryai.example/schemas/discovery-gap-bench-1.0.json",
+  "title": "DiscoveryGapBench",
+  "type": "object",
+  "required": ["schema_version", "benchmark_id", "benchmark_version", "annotation_rubric_version", "records"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "benchmark_id": {"type": "string", "minLength": 1},
+    "benchmark_version": {"type": "string", "minLength": 1},
+    "annotation_rubric_version": {"type": "string", "minLength": 1},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["record_id", "research_question", "corpus_snapshot", "candidate_gap", "gold_evidence", "gold_assessment", "annotations", "split"],
+        "properties": {
+          "record_id": {"type": "string", "minLength": 1},
+          "research_question": {"type": "string", "minLength": 1},
+          "corpus_snapshot": {
+            "type": "object",
+            "required": ["corpus_id", "snapshot_date", "paper_ids", "scope_statement"],
+            "properties": {
+              "corpus_id": {"type": "string", "minLength": 1},
+              "snapshot_date": {"type": "string", "format": "date"},
+              "paper_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "scope_statement": {"type": "string", "minLength": 1}
+            }
+          },
+          "candidate_gap": {
+            "type": "object",
+            "required": ["candidate_id", "title", "description", "gap_type"],
+            "properties": {
+              "candidate_id": {"type": "string", "minLength": 1},
+              "title": {"type": "string", "minLength": 1},
+              "description": {"type": "string", "minLength": 1},
+              "gap_type": {"enum": ["topic", "dataset", "benchmark", "experiment", "evaluation", "application", "interdisciplinary"]}
+            }
+          },
+          "gold_evidence": {
+            "type": "object",
+            "required": ["supporting", "contradictory"],
+            "properties": {
+              "supporting": {"$ref": "#/$defs/evidence"},
+              "contradictory": {"$ref": "#/$defs/evidence"}
+            }
+          },
+          "gold_assessment": {
+            "type": "object",
+            "required": ["gap_status", "novelty_within_corpus", "relevance", "feasibility", "evidence_quality"],
+            "properties": {
+              "gap_status": {"enum": ["supported", "contradicted", "inconclusive"]},
+              "novelty_within_corpus": {"$ref": "#/$defs/rating"},
+              "relevance": {"$ref": "#/$defs/rating"},
+              "feasibility": {"$ref": "#/$defs/rating"},
+              "evidence_quality": {"$ref": "#/$defs/rating"}
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "required": ["annotator_ids", "annotated_at", "adjudication_status", "adjudication_notes"],
+            "properties": {
+              "annotator_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "annotated_at": {"type": "string", "format": "date"},
+              "adjudication_status": {"enum": ["pending", "adjudicated"]},
+              "adjudication_notes": {"type": ["string", "null"]}
+            }
+          },
+          "split": {"enum": ["train", "validation", "test"]},
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "rating": {"type": "integer", "minimum": 0, "maximum": 3},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["paper_id", "document_id", "chunk_id", "relevance", "rationale"],
+        "properties": {
+          "paper_id": {"type": "string", "minLength": 1},
+          "document_id": {"type": "string", "minLength": 1},
+          "chunk_id": {"type": "string", "minLength": 1},
+          "relevance": {"$ref": "#/$defs/rating"},
+          "rationale": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}
