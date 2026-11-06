@@ -79,14 +79,14 @@ def build_blinded_packets(
             "snapshot_date": corpus["snapshot_date"],
             "scope_statement": corpus["scope_statement"],
         }
-        if include_paper_ids:
+        if include_paper_ids and isinstance(corpus.get("paper_ids"), list):
             corpus_view["paper_ids"] = list(corpus["paper_ids"])
 
         packet_records.append({
             "blind_record_id": blind_id,
             "research_question": record["research_question"],
             "corpus_snapshot": corpus_view,
-            "candidate_gap": dict(record["candidate_gap"]),
+            "candidate_gap": {key: record["candidate_gap"][key] for key in ("candidate_id", "title", "description", "gap_type")},
             "review_form": {
                 "gap_status": None,
                 "novelty_within_corpus": None,
@@ -127,7 +127,6 @@ def main() -> int:
                         help="Include corpus paper IDs; default hides them to reduce identity cues.")
     args = parser.parse_args()
     try:
-        benchmark, _ = load_benchmark(args.benchmark, require_evaluable=False)
         source = json.loads(args.candidates.read_text(encoding="utf-8"))
         packet, crosswalk = build_blinded_packets(
             source, include_paper_ids=args.include_paper_ids
