@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export blinded, gold-label-free packets for independent DiscoveryGapBench reviewers.
+"""Export blinded, gold-label-free packets from candidate-only records for independent reviewers.
 
 The input benchmark is treated as confidential source material. Packets never include
 gold_assessment, gold_evidence, adjudication state, prior annotator IDs, or source record IDs.
@@ -18,7 +18,6 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from app.services.evaluation.discovery_gap_bench import load_benchmark  # noqa: E402
 
 
 def _opaque_id(record_id: str, salt: str) -> str:
@@ -26,10 +25,41 @@ def _opaque_id(record_id: str, salt: str) -> str:
     return f"blind-{digest}"
 
 
+def _validate_candidate_source(source: Any) -> None:
+    if not isinstance(source, dict):
+        raise ValueError("candidate source root must be an object")
+    for field in ("benchmark_id", "benchmark_version", "annotation_rubric_version"):
+        if not isinstance(source.get(field), str) or not source[field].strip():
+            raise ValueError(f"{field} must be a non-empty string")
+    records = source.get("records")
+    if not isinstance(records, list) or not records:
+        raise ValueError("records must be a non-empty array")
+    seen: set[str] = set()
+    for index, record in enumerate(records):
+        prefix = f"records[{index}]"
+        if not isinstance(record, dict):
+            raise ValueError(f"{prefix} must be an object")
+        rid = record.get("record_id")
+        if not isinstance(rid, str) or not rid.strip():
+            raise ValueError(f"{prefix}.record_id must be non-empty")
+        if rid in seen:
+            raise ValueError(f"duplicate record_id {rid!r}")
+        seen.add(rid)
+        if not isinstance(record.get("research_question"), str) or not record["research_question"].strip():
+            raise ValueError(f"{prefix}.research_question must be non-empty")
+        corpus = record.get("corpus_snapshot")
+        if not isinstance(corpus, dict) or any(not isinstance(corpus.get(k), str) or not corpus[k].strip() for k in ("corpus_id", "snapshot_date", "scope_statement")):
+            raise ValueError(f"{prefix}.corpus_snapshot is incomplete")
+        candidate = record.get("candidate_gap")
+        if not isinstance(candidate, dict) or any(not isinstance(candidate.get(k), str) or not candidate[k].strip() for k in ("candidate_id", "title", "description", "gap_type")):
+            raise ValueError(f"{prefix}.candidate_gap is incomplete")
+
+
 def build_blinded_packets(
     benchmark: dict[str, Any], *, include_paper_ids: bool = False, salt: str | None = None
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Build two identical blind packets plus a confidential source-ID crosswalk."""
+    """Build two identical blind packets from candidate-only input."""
+    _validate_candidate_source(benchmark)
     salt = salt or secrets.token_hex(16)
     mapping: dict[str, str] = {}
     packet_records = []
@@ -91,15 +121,16 @@ def build_blinded_packets(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--benchmark", required=True, type=Path)
+    parser.add_argument("--candidates", required=True, type=Path, help="Candidate-only JSON without gold labels.")
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--include-paper-ids", action="store_true",
                         help="Include corpus paper IDs; default hides them to reduce identity cues.")
     args = parser.parse_args()
     try:
         benchmark, _ = load_benchmark(args.benchmark, require_evaluable=False)
+        source = json.loads(args.candidates.read_text(encoding="utf-8"))
         packet, crosswalk = build_blinded_packets(
-            benchmark, include_paper_ids=args.include_paper_ids
+            source, include_paper_ids=args.include_paper_ids
         )
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for reviewer in ("reviewer-a", "reviewer-b"):
