@@ -105,3 +105,15 @@ A passing engineering test suite alone does not satisfy this scientific validati
 - The starter template is intentionally not score-eligible. A real benchmark requires reviewed human annotations and adjudication.
 
 P4.1 code is implemented; merge/CI verification and creation of the real expert-annotated pilot set remain outstanding.
+
+
+## P4.2 implementation delivered
+
+- Offline deterministic runner: `backend/app/services/evaluation/runner.py`.
+- CLI: `python scripts/evaluation/run_discovery_gap_bench.py --benchmark ... --predictions ... --split test --output ...`.
+- Evaluates gap-status accuracy/macro-F1/confusion matrix, exact evidence precision/recall/F1 and stance accuracy, and MAE for four expert ratings.
+- Emits per-record results, aggregate means, bootstrap 95% intervals when sample size permits, benchmark/corpus metadata, and explicit limitations.
+- Enforces adjudicated-only gold, complete one-to-one prediction coverage, benchmark version and corpus snapshot match, and evidence provenance within the frozen corpus.
+- Prediction format template and run protocol included.
+
+P4.2 engineering implementation is ready for CI review. It does not create benchmark labels or claim model performance; real adjudicated gold and real system predictions are required for meaningful scores.
