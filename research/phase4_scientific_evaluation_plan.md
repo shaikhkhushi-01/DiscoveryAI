@@ -117,3 +117,14 @@ P4.1 code is implemented; merge/CI verification and creation of the real expert-
 - Prediction format template and run protocol included.
 
 P4.2 engineering implementation is ready for CI review. It does not create benchmark labels or claim model performance; real adjudicated gold and real system predictions are required for meaningful scores.
+
+
+## P4.3 implementation delivered
+
+- Five-system comparison harness for `llm_only`, `vector_rag`, `graph_rag`, `hybrid_retrieval`, and `discoveryai_full`.
+- All systems are evaluated through the same P4.2 runner, benchmark version, frozen corpus, split, and exact record IDs.
+- Shared per-record evidence-item cap is enforced.
+- Reports per-system status accuracy/macro-F1, evidence metrics, rating MAE, full per-system reports, and paired full-system-minus-baseline record-level deltas with descriptive bootstrap intervals.
+- Added baseline prediction artifact guidance, comparison protocol, CLI, and regression tests.
+
+P4.3 comparison harness is implemented. It does not itself execute or emulate the five retrieval/LLM systems: actual outputs from each independently configured baseline must be generated and supplied. No baseline result or superiority claim is asserted until real adjudicated gold and all five prediction artifacts exist.
