@@ -93,3 +93,15 @@ Phase 4 is complete only when:
 - Limitations and confidence intervals are reported honestly.
 
 A passing engineering test suite alone does not satisfy this scientific validation gate.
+
+
+## P4.1 implementation delivered
+
+- Versioned JSON Schema: `data/evaluation/discovery_gap_bench.schema.json`.
+- Python validator and loader: `backend/app/services/evaluation/discovery_gap_bench.py`.
+- CLI validation command: `python scripts/evaluation/validate_discovery_gap_bench.py <benchmark.json>`.
+- Annotation rubric: `research/discovery_gap_bench_annotation_rubric.md`.
+- Unit tests cover valid/adjudicated records, pending annotations, corpus/evidence provenance, duplicate IDs, placeholder rejection, and fail-closed loading.
+- The starter template is intentionally not score-eligible. A real benchmark requires reviewed human annotations and adjudication.
+
+P4.1 code is implemented; merge/CI verification and creation of the real expert-annotated pilot set remain outstanding.
