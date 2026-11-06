@@ -27,7 +27,7 @@ def evidence_key(item: dict[str, Any]) -> tuple[str, str, str]:
     return (str(item["paper_id"]), str(item["document_id"]), str(item["chunk_id"]))
 
 
-def _validate_predictions(payload: Any, expected_ids: set[str], benchmark_version: str) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+def _validate_predictions(payload: Any, expected_ids: set[str], benchmark_version: str, corpus_id: str, allowed_paper_ids: set[str]) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     if not isinstance(payload, dict):
         raise ValueError("prediction file root must be an object")
     metadata = payload.get("run_metadata")
@@ -39,6 +39,8 @@ def _validate_predictions(payload: Any, expected_ids: set[str], benchmark_versio
             raise ValueError(f"run_metadata.{key} is required and cannot be a placeholder")
     if metadata["benchmark_version"] != benchmark_version:
         raise ValueError("prediction benchmark_version does not match the gold benchmark")
+    if metadata["corpus_id"] != corpus_id:
+        raise ValueError("prediction corpus_id does not match the selected gold corpus snapshot")
     predictions = payload.get("predictions")
     if not isinstance(predictions, list):
         raise ValueError("predictions must be an array")
@@ -74,6 +76,8 @@ def _validate_predictions(payload: Any, expected_ids: set[str], benchmark_versio
                 raise ValueError(f"{ep} requires stance supporting or contradictory")
             if not all(isinstance(entry.get(k), str) and entry[k].strip() for k in ("paper_id", "document_id", "chunk_id")):
                 raise ValueError(f"{ep} requires paper_id, document_id, and chunk_id")
+            if entry["paper_id"] not in allowed_paper_ids:
+                raise ValueError(f"{ep}.paper_id is outside the selected frozen corpus snapshot")
             key = evidence_key(entry)
             if key in seen:
                 raise ValueError(f"{ep} duplicates evidence {key!r}")
@@ -171,10 +175,16 @@ def evaluate_benchmark(
     selected = [record for record in all_evaluable if record["split"] == split]
     if not selected:
         raise ValueError(f"no adjudicated records in split {split!r}; refusing to compute metrics")
+    corpus_ids = {record["corpus_snapshot"]["corpus_id"] for record in selected}
+    if len(corpus_ids) != 1:
+        raise ValueError("selected split spans multiple corpus snapshots; evaluate each snapshot separately")
+    selected_paper_ids = {paper_id for record in selected for paper_id in record["corpus_snapshot"]["paper_ids"]}
     metadata, predictions = _validate_predictions(
         json.loads(Path(predictions_path).read_text(encoding="utf-8")),
         {record["record_id"] for record in selected},
         benchmark["benchmark_version"],
+        next(iter(corpus_ids)),
+        selected_paper_ids,
     )
     per_record = []
     metric_rows: dict[str, list[float]] = {}
