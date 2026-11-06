@@ -85,3 +85,20 @@ def test_report_writer_creates_parent_directory(tmp_path):
     output = tmp_path / "reports" / "run.json"
     write_report(report, output)
     assert json.loads(output.read_text(encoding="utf-8"))["report_schema_version"] == "1.0"
+
+
+
+def test_runner_rejects_corpus_snapshot_mismatch(tmp_path):
+    benchmark, predictions, payload = _write_inputs(tmp_path)
+    payload["run_metadata"]["corpus_id"] = "another-corpus"
+    predictions.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="corpus_id does not match"):
+        evaluate_benchmark(benchmark, predictions)
+
+
+def test_runner_rejects_evidence_outside_frozen_corpus(tmp_path):
+    benchmark, predictions, payload = _write_inputs(tmp_path)
+    payload["predictions"][0]["evidence"][0]["paper_id"] = "outside-paper"
+    predictions.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="outside the selected frozen corpus"):
+        evaluate_benchmark(benchmark, predictions)
