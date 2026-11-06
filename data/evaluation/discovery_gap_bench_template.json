@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "benchmark_id": "discovery-gap-bench",
+  "benchmark_version": "0.1.0",
+  "annotation_rubric_version": "replace-with-rubric-version",
+  "records": [
+    {
+      "record_id": "replace-with-stable-record-id",
+      "research_question": "replace-with-research-question",
+      "corpus_snapshot": {
+        "corpus_id": "replace-with-corpus-id",
+        "snapshot_date": "YYYY-MM-DD",
+        "paper_ids": ["paper-id-1"],
+        "scope_statement": "State exactly which collection and time range are represented."
+      },
+      "candidate_gap": {
+        "candidate_id": "candidate-id-1",
+        "title": "replace-with-candidate-title",
+        "description": "replace-with-testable-gap-description",
+        "gap_type": "topic|dataset|benchmark|experiment|evaluation|application|interdisciplinary"
+      },
+      "gold_evidence": {
+        "supporting": [
+          {
+            "paper_id": "paper-id-1",
+            "document_id": "document-id-1",
+            "chunk_id": "chunk-id-1",
+            "relevance": 0,
+            "rationale": "Annotator explanation"
+          }
+        ],
+        "contradictory": []
+      },
+      "gold_assessment": {
+        "gap_status": "supported|contradicted|inconclusive",
+        "novelty_within_corpus": 0,
+        "relevance": 0,
+        "feasibility": 0,
+        "evidence_quality": 0
+      },
+      "annotations": {
+        "annotator_ids": ["pseudonymous-annotator-id"],
+        "annotated_at": "YYYY-MM-DD",
+        "adjudication_status": "pending|adjudicated",
+        "adjudication_notes": null
+      },
+      "split": "train|validation|test",
+      "notes": "Do not use placeholder records as evaluation data."
+    }
+  ]
+}
