@@ -6,7 +6,7 @@ Create a reproducible, blinded, dual-annotator process for validating candidate 
 ## Annotation procedure
 1. Freeze benchmark version, corpus snapshot/date, research question, candidate gap, and the exact source passages before annotation.
 2. Assign two independent domain-qualified reviewers pseudonymous IDs. Reviewers must not see each other's labels or model predictions.
-3. Export separate reviewer packets using `python scripts/evaluation/export_blinded_annotation_packets.py --benchmark path/to/benchmark.json --output-dir private/annotation-batch`.
+3. Export separate reviewer packets using `python scripts/evaluation/export_blinded_annotation_packets.py --candidates path/to/candidate-records.json --output-dir private/annotation-batch`.
 4. Give each reviewer only their packet and the locked rubric. Keep `CONFIDENTIAL-blind-id-crosswalk.json` private; it maps blind IDs back to benchmark record IDs.
 5. **Important:** the exporter removes gold assessments and gold evidence. It does not fetch or package full source passages. A study coordinator must separately supply the same licensed, page/chunk-identified source excerpts to both reviewers, with no model labels or generated explanations.
 6. Each reviewer independently labels gap status (supported / contradicted / inconclusive), four 0–3 ratings (novelty within corpus, relevance, feasibility, evidence quality), and supporting/contradictory evidence tuples with a written rationale.

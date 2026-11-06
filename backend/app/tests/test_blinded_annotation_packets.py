@@ -58,6 +58,35 @@ class BlindedPacketTests(unittest.TestCase):
         })
         self.assertIsNone(packet["records"][0]["review_form"]["gap_status"])
 
+
+    def test_candidate_only_source_needs_no_gold_labels(self):
+        record = self.benchmark["records"][0]
+        candidate_only = {
+            "benchmark_id": "pilot", "benchmark_version": "1.0",
+            "annotation_rubric_version": "1.0",
+            "records": [{key: record[key] for key in (
+                "record_id", "research_question", "corpus_snapshot", "candidate_gap"
+            )}],
+        }
+        packet, _ = build_blinded_packets(candidate_only, salt="candidate-only")
+        rendered = str(packet)
+        self.assertNotIn("gold_assessment", rendered)
+        self.assertNotIn("gold_evidence", rendered)
+        self.assertNotIn("annotations", rendered)
+        self.assertEqual(len(packet["records"]), 1)
+
+    def test_rejects_duplicate_candidate_ids(self):
+        record = self.benchmark["records"][0]
+        minimal = {key: record[key] for key in (
+            "record_id", "research_question", "corpus_snapshot", "candidate_gap"
+        )}
+        candidate_only = {
+            "benchmark_id": "pilot", "benchmark_version": "1.0",
+            "annotation_rubric_version": "1.0", "records": [minimal, minimal],
+        }
+        with self.assertRaisesRegex(ValueError, "duplicate record_id"):
+            build_blinded_packets(candidate_only)
+
     def test_default_packet_hides_paper_ids(self):
         packet, _ = build_blinded_packets(self.benchmark, salt="fixed-salt")
         self.assertNotIn("paper_ids", packet["records"][0]["corpus_snapshot"])
