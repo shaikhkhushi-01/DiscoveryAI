@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -93,8 +94,9 @@ def test_duplicate_record_ids_are_rejected():
 
 
 def test_placeholder_template_is_not_valid_gold_data():
+    repo_root = Path(__file__).resolve().parents[3]
     template = json.loads(
-        open("data/evaluation/discovery_gap_bench_template.json", encoding="utf-8").read()
+        (repo_root / "data/evaluation/discovery_gap_bench_template.json").read_text(encoding="utf-8")
     )
     report = validate_benchmark(template)
     assert not report.valid
