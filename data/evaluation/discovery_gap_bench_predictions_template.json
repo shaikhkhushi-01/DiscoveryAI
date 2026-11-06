@@ -1,0 +1,35 @@
+{
+  "run_metadata": {
+    "run_id": "replace-with-unique-run-id",
+    "system_id": "replace-with-system-name",
+    "system_version": "replace-with-system-version",
+    "code_revision": "replace-with-git-commit-sha",
+    "corpus_id": "replace-with-frozen-corpus-id",
+    "benchmark_version": "0.1.0",
+    "model_provider": "replace-with-provider",
+    "model_name": "replace-with-model",
+    "prompt_version": "replace-with-prompt-version",
+    "embedding_model": "replace-with-embedding-model",
+    "retrieval_config": "replace-with-retrieval-config"
+  },
+  "predictions": [
+    {
+      "record_id": "record-id-from-gold-benchmark",
+      "gap_status": "inconclusive",
+      "ratings": {
+        "novelty_within_corpus": 0,
+        "relevance": 0,
+        "feasibility": 0,
+        "evidence_quality": 0
+      },
+      "evidence": [
+        {
+          "paper_id": "paper-id",
+          "document_id": "document-id",
+          "chunk_id": "chunk-id",
+          "stance": "supporting"
+        }
+      ]
+    }
+  ]
+}
