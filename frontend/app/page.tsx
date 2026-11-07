@@ -76,7 +76,7 @@ export default function Home() {
         <div className="brand"><span className="brand-mark">D</span><div><strong>DiscoveryAI</strong><small>Scientific Intelligence</small></div></div>
         <nav>
           {["Overview", "Research Gaps", "Knowledge Graph", "Papers", "Trends", "Hypotheses", "Experiments"].map((item) => (
-            <button key={item} className={active === item ? "nav-item active" : "nav-item"} onClick={() => setActive(item)}>
+            <button key={item} className={active === item ? "nav-item active" : "nav-item"} onClick={() => item === "Papers" ? (window.location.href = "/papers") : setActive(item)}>
               <span className="nav-dot" />{item}
             </button>
           ))}
