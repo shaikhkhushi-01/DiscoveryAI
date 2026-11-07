@@ -17,6 +17,7 @@ export default function PapersPage() {
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [libraryBusy, setLibraryBusy] = useState(false);
   const [libraryError, setLibraryError] = useState("");
+  const [retryingId, setRetryingId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [error, setError] = useState("");
@@ -47,6 +48,18 @@ export default function PapersPage() {
     return () => window.clearInterval(timer);
   }, [token]);
 
+  async function retryIndexing(documentId: number) {
+    if (!token) return;
+    setRetryingId(documentId);
+    setLibraryError("");
+    try {
+      const response = await fetch(API_BASE + "/api/v1/documents/" + documentId + "/index", { method: "POST", headers: { Authorization: "Bearer " + token } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || "Could not queue indexing.");
+      await refreshLibrary();
+    } catch (e) { setLibraryError(e instanceof Error ? e.message : "Could not queue indexing."); }
+    finally { setRetryingId(null); }
+  }
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -207,6 +220,7 @@ export default function PapersPage() {
                 <span style={{ color: failed ? "#ff9d9d" : done ? "#5ee7c4" : "#e5c477", fontSize: 11 }}>{status} · Document #{paper.id}{job ? " · Job #" + job.job_id : ""}</span>
                 <span style={{ color: "#78869a", fontSize: 11 }}>{paper.page_count ? paper.page_count + " pages" : "Page count unavailable"}{paper.doi ? " · DOI " + paper.doi : ""}{job ? " · Vectors: " + job.vector_status + " · Knowledge graph: " + job.graph_status : ""}</span>
                 {job?.last_error && <span style={{ color: "#ff9d9d", fontSize: 11 }}>Last error: {job.last_error}</span>}
+                {(!job || failed || status === "retry") && <button type="button" className="text-btn" style={{ justifySelf: "start", marginTop: 4 }} onClick={() => retryIndexing(paper.id)} disabled={retryingId === paper.id}>{retryingId === paper.id ? "Queueing…" : "Retry indexing"}</button>}
               </div>;
             })}
           </section>
