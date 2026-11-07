@@ -4,8 +4,8 @@ from app.services.llm.base import LLMProvider
 
 
 class StubProvider(LLMProvider):
-    def __init__(self, response):
-        self.responses = response if isinstance(response, list) else [response]
+    def __init__(self, *responses):
+        self.responses = list(responses)
         self.calls = 0
 
     async def generate(self, prompt, *, system=None, temperature=0.0):
