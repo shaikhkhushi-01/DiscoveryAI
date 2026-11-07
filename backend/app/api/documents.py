@@ -6,11 +6,13 @@ import re
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 import time
 
 from app.auth.dependencies import get_current_user
 from app.db.session import get_db
 from app.models.document import Document
+from app.models.indexing_job import IndexingJob
 from app.models.paper import Paper
 from app.models.user import User
 from app.services.document_ingestion import DocumentIngestionError, checksum, process_pdf, store_pdf, validate_pdf
@@ -59,6 +61,56 @@ def build_scientific_extraction(
             else []
             for key in EXTRACTION_KEYS
         },
+    }
+
+
+@router.get("")
+def list_documents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the persistent corpus library and latest indexing state."""
+    rows = (
+        db.query(Document, Paper, IndexingJob)
+        .join(Paper, Document.paper_id == Paper.id)
+        .outerjoin(IndexingJob, IndexingJob.document_id == Document.id)
+        .order_by(desc(Document.id))
+        .all()
+    )
+    documents = []
+    for document, paper, job in rows:
+        payload = {}
+        try:
+            payload = json.loads(document.metadata_json or "{}")
+        except (TypeError, ValueError):
+            payload = {}
+        extraction = payload.get("extraction") or {}
+        documents.append({
+            "id": document.id,
+            "paper_id": paper.id,
+            "title": paper.title or extraction.get("title") or Path(document.storage_uri or "paper.pdf").name,
+            "doi": paper.doi,
+            "publication_date": paper.publication_date.isoformat() if paper.publication_date else None,
+            "page_count": document.page_count,
+            "document_status": document.status,
+            "indexing": _library_job_status(job),
+        })
+    return {"items": documents, "total": len(documents)}
+
+
+def _library_job_status(job: IndexingJob | None) -> dict | None:
+    if job is None:
+        return None
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "attempts": job.attempts,
+        "vector_status": job.vector_status,
+        "graph_status": job.graph_status,
+        "last_error": job.last_error,
+        "queued_at": job.queued_at.isoformat() if job.queued_at else None,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
     }
 
 
