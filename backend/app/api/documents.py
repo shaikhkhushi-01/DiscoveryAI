@@ -4,7 +4,9 @@ import json
 import re
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
+import time
 
 from app.auth.dependencies import get_current_user
 from app.db.session import get_db
@@ -96,6 +98,18 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
             "figures": parsed["figures"],
             "chunks": parsed["chunks"],
         }
+        # PostgreSQL text/JSON-backed columns reject the NUL byte (0x00).
+        # Sanitize every nested string before serialization, not just full text.
+        def strip_nul(value):
+            if isinstance(value, str):
+                return value.replace("\\x00", "")
+            if isinstance(value, list):
+                return [strip_nul(item) for item in value]
+            if isinstance(value, dict):
+                return {key: strip_nul(item) for key, item in value.items()}
+            return value
+
+        metadata_payload = strip_nul(metadata_payload)
         document = Document(
             paper_id=paper.id,
             document_type="paper",
@@ -103,16 +117,43 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
             checksum=digest,
             status="parsed",
             page_count=parsed["page_count"],
-            extracted_text=parsed["text"],
-            metadata_json=json.dumps(metadata_payload),
+            extracted_text=parsed["text"].replace("\\x00", ""),
+            metadata_json=json.dumps(metadata_payload, ensure_ascii=False),
         )
         db.add(document)
-        db.commit()
+        # Render/database cold starts can cause brief connection timeouts.
+        # Retry only transient operational DB errors; do not repeat PDF parsing
+        # or paid LLM extraction for the same request.
+        for attempt in range(3):
+            try:
+                db.commit()
+                break
+            except OperationalError:
+                db.rollback()
+                if attempt == 2:
+                    raise
+                time.sleep(0.5 * (2 ** attempt))
+                db.add(paper)
+                db.add(document)
         db.refresh(document)
         return {"id": document.id, "paper_id": paper.id, "checksum": digest, "status": document.status, "page_count": document.page_count}
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Database temporarily unavailable while saving this PDF. Please retry this file.",
+            headers={"Retry-After": "15"},
+        ) from None
+    except GeminiUpstreamError:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="AI extraction service is temporarily unavailable. Please retry this file.",
+            headers={"Retry-After": "30"},
+        ) from None
     except Exception as exc:
         db.rollback()
-        raise HTTPException(status_code=422, detail=f"Document processing failed: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"Document processing failed: {type(exc).__name__}: {str(exc)[:300]}") from exc
 
 
 @router.post("/{document_id}/extract")
