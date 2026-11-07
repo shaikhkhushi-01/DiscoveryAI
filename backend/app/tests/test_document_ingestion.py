@@ -21,6 +21,6 @@ def test_text_cleaning_and_sections():
     assert any(s["type"] == "introduction" for s in sections)
 
 def test_text_cleaning_removes_nul_and_control_characters():
-    cleaned = clean_text("Title" + chr(0) + chr(1) + "\\nBody" + chr(0))
-    assert cleaned == "Title\\nBody"
+    cleaned = clean_text("Title" + chr(0) + chr(1) + chr(10) + "Body" + chr(0))
+    assert cleaned == "Title" + chr(10) + "Body"
     assert chr(0) not in cleaned
