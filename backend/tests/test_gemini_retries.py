@@ -28,7 +28,7 @@ async def test_gemini_retries_transient_503(monkeypatch):
             calls["count"] += 1
             if calls["count"] < 3:
                 return httpx.Response(503, request=httpx.Request("POST", "https://example.test"))
-            return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "{\\"ok\\": true}"}]}}]}, request=httpx.Request("POST", "https://example.test"))
+            return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": '{"ok": true}'}]}}]}, request=httpx.Request("POST", "https://example.test"))
 
     async def no_sleep(_):
         return None
@@ -92,7 +92,7 @@ async def test_gemini_uses_header_and_fallback_after_primary_503(monkeypatch):
                 return httpx.Response(503, request=httpx.Request("POST", url))
             return httpx.Response(
                 200,
-                json={"candidates": [{"content": {"parts": [{"text": "{\\"fallback\\": true}"}]}}]},
+                json={"candidates": [{"content": {"parts": [{"text": '{"fallback": true}'}]}}]},
                 request=httpx.Request("POST", url),
             )
 
