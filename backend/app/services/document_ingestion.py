@@ -59,10 +59,12 @@ def parse_pdf(path: Path) -> dict[str, Any]:
         doc.close()
 
 def clean_text(text: str) -> str:
-    text = text.replace("\u00ad", "")
-    text = re.sub(r"-\n(?=[a-z])", "", text)
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
+    """Normalize PDF text and remove PostgreSQL-incompatible NUL/control chars."""
+    text = text.replace("\\x00", "").replace("\u00ad", "")
+    text = "".join(ch for ch in text if ch in "\\n\\r\\t" or ord(ch) >= 32)
+    text = re.sub(r"-\\n(?=[a-z])", "", text)
+    text = re.sub(r"[ \\t]+", " ", text)
+    text = re.sub(r"\\n{3,}", "\\n\\n", text)
     return text.strip()
 
 def detect_sections(text: str) -> list[dict[str, str]]:
