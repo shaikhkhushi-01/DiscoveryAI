@@ -59,8 +59,10 @@ export default function PapersPage() {
     setBusy(true);
     setError("");
     setNotice("");
-    const results: UploadItem[] = [];
+    const results: UploadItem[] = [...items];
+    const alreadyQueued = new Set(items.filter(item => item.status === "Indexing queued").map(item => item.name));
     for (const file of files) {
+      if (alreadyQueued.has(file.name)) continue;
       if (!file.name.toLowerCase().endsWith(".pdf") || file.type && file.type !== "application/pdf") {
         results.push({ name: file.name, status: "Failed", message: "Only PDF files are accepted." });
         setItems([...results]);
@@ -75,6 +77,15 @@ export default function PapersPage() {
           body: form,
         });
         const uploadData = await uploaded.json().catch(() => ({}));
+        if (uploaded.status === 401) {
+          results.push({ name: file.name, status: "Re-login required", message: "Session expired before this file could be uploaded." });
+          setItems([...results]);
+          window.sessionStorage.removeItem("discoveryai_access_token");
+          setToken("");
+          setError("Session expired. Sign in again, then click Upload and index to continue with the remaining PDFs. Already queued files will be skipped.");
+          setBusy(false);
+          return;
+        }
         if (!uploaded.ok) {
           const detail = typeof uploadData.detail === "string" ? uploadData.detail : JSON.stringify(uploadData.detail || uploadData);
           throw new Error(detail || "PDF upload failed (" + uploaded.status + ").");
@@ -86,6 +97,15 @@ export default function PapersPage() {
           headers: { Authorization: "Bearer " + token },
         });
         const indexData = await indexed.json().catch(() => ({}));
+        if (indexed.status === 401) {
+          results.push({ name: file.name, status: "Re-login required", message: "PDF uploaded; sign in again to queue indexing. Retrying is safe because duplicate PDF uploads return the existing document." });
+          setItems([...results]);
+          window.sessionStorage.removeItem("discoveryai_access_token");
+          setToken("");
+          setError("Session expired after upload. Sign in again and click Upload and index to resume; this PDF will be queued without creating a duplicate.");
+          setBusy(false);
+          return;
+        }
         if (!indexed.ok) {
           const detail = typeof indexData.detail === "string" ? indexData.detail : JSON.stringify(indexData.detail || indexData);
           throw new Error("Uploaded, but indexing could not be queued: " + (detail || indexed.status));
@@ -94,9 +114,6 @@ export default function PapersPage() {
       } catch (e) {
         const message = e instanceof Error ? e.message : "Unexpected upload error.";
         results.push({ name: file.name, status: "Failed", message });
-        if (message.includes("401") || message.toLowerCase().includes("unauthorized")) {
-          setError("Your session may have expired. Sign in again and retry the failed files.");
-        }
       }
       setItems([...results]);
     }
