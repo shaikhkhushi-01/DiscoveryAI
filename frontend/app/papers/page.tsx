@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://discoveryai-6dmk.onrender.com";
 
 type UploadItem = { name: string; status: string; message?: string };
+type LibraryItem = { id: number; paper_id: number; title: string; doi?: string | null; page_count?: number | null; document_status: string; indexing?: { job_id: number; status: string; attempts: number; vector_status: string; graph_status: string; last_error?: string | null } | null };
 
 export default function PapersPage() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -13,6 +14,9 @@ export default function PapersPage() {
   const [password, setPassword] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [items, setItems] = useState<UploadItem[]>([]);
+  const [library, setLibrary] = useState<LibraryItem[]>([]);
+  const [libraryBusy, setLibraryBusy] = useState(false);
+  const [libraryError, setLibraryError] = useState("");
   const [busy, setBusy] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +26,26 @@ export default function PapersPage() {
     const saved = window.sessionStorage.getItem("discoveryai_access_token");
     if (saved) setToken(saved);
   }, []);
+
+  async function refreshLibrary() {
+    if (!token) return;
+    setLibraryBusy(true); setLibraryError("");
+    try {
+      const response = await fetch(API_BASE + "/api/v1/documents", { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
+      if (response.status === 401) { window.sessionStorage.removeItem("discoveryai_access_token"); setToken(""); throw new Error("Session expired. Please sign in again."); }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || "Could not load document library.");
+      setLibrary(Array.isArray(data.items) ? data.items : []);
+    } catch (e) { setLibraryError(e instanceof Error ? e.message : "Could not load document library."); }
+    finally { setLibraryBusy(false); }
+  }
+
+  useEffect(() => {
+    if (!token) return;
+    void refreshLibrary();
+    const timer = window.setInterval(() => { void refreshLibrary(); }, 10000);
+    return () => window.clearInterval(timer);
+  }, [token]);
 
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
