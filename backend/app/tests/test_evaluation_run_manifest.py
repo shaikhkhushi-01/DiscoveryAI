@@ -8,6 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from scripts.evaluation import package_evaluation_run
 from scripts.evaluation.package_evaluation_run import build_run_manifest
 
 
@@ -95,6 +96,7 @@ def test_manifest_requires_unique_prediction_ids(tmp_path):
 def test_manifest_requires_code_revision(tmp_path, monkeypatch):
     benchmark, predictions, report = _fixtures(tmp_path)
     monkeypatch.delenv("GITHUB_SHA", raising=False)
+    monkeypatch.setattr(package_evaluation_run, "_git_revision", lambda: None)
     with pytest.raises(ValueError, match="code revision is required"):
         build_run_manifest(
             benchmark_path=benchmark, predictions_path=predictions, report_path=report,
