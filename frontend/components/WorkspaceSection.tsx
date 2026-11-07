@@ -124,17 +124,17 @@ export default function WorkspaceSection({ section }: { section: SectionKey }) {
         <a className="brand" href="/"><span className="brand-mark">D</span><div><strong>DiscoveryAI</strong><small>Scientific Intelligence</small></div></a>
         <nav>
           <a className="nav-item" href="/">Overview</a>
-          <a className="nav-item" href="/research-gaps">Research Gaps</a>
-          <a className="nav-item" href="/knowledge-graph">Knowledge Graph</a>
+          <a className={section === "research-gaps" ? "nav-item active" : "nav-item"} href="/research-gaps">Research Gaps</a>
+          <a className={section === "knowledge-graph" ? "nav-item active" : "nav-item"} href="/knowledge-graph">Knowledge Graph</a>
           <a className="nav-item" href="/papers">Papers</a>
-          <a className="nav-item" href="/trends">Trends</a>
-          <a className="nav-item" href="/hypotheses">Hypotheses</a>
-          <a className="nav-item" href="/experiments">Experiments</a>
+          <a className={section === "trends" ? "nav-item active" : "nav-item"} href="/trends">Trends</a>
+          <a className={section === "hypotheses" ? "nav-item active" : "nav-item"} href="/hypotheses">Hypotheses</a>
+          <a className={section === "experiments" ? "nav-item active" : "nav-item"} href="/experiments">Experiments</a>
         </nav>
         <div className="sidebar-bottom"><div className="status"><span className="live-dot" /> Connected workspace</div><div className="version">DiscoveryAI · Research tools</div></div>
       </aside>
       <section className="workspace">
-        <header className="topbar"><div><p className="eyebrow">SCIENTIFIC DISCOVERY WORKSPACE</p><h1>{config.title}</h1></div><div className="top-actions"><span className="demo-pill">API CONNECTED</span><a className="icon-btn" href="/">⌂</a></div></header>
+        <header className="topbar"><div><p className="eyebrow">SCIENTIFIC DISCOVERY WORKSPACE</p><h1>{config.title}</h1></div><div className="top-actions"><span className="demo-pill">{error ? "API ERROR" : config.protected && !token ? "SIGN IN REQUIRED" : data !== null ? "LIVE DATA" : "CONNECTING"}</span><a className="icon-btn" href="/">⌂</a></div></header>
         <div className="content">
           <section className="panel">
             <span className="label">{config.eyebrow}</span>
