@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
 export default function Home() {
@@ -10,6 +10,7 @@ export default function Home() {
   const [liveGaps, setLiveGaps] = useState<any[]>([]);
   const [livePapers, setLivePapers] = useState<any[]>([]);
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [apiError, setApiError] = useState("");
   // Override with NEXT_PUBLIC_API_URL to point at the deployed backend.
@@ -103,7 +104,7 @@ export default function Home() {
           </div>
           <div className="top-actions">
             <span className={live ? "demo-pill live-pill" : "demo-pill"}>{live ? "LIVE DATA" : "DEMO DATA"}</span>
-            <button className="icon-btn">⌕</button>
+            <button className="icon-btn" type="button" aria-label="Focus research search" onClick={() => searchInputRef.current?.focus()}>⌕</button>
             <div className="avatar">AI</div>
           </div>
         </header>
@@ -114,7 +115,7 @@ export default function Home() {
               <span className="label">RESEARCH OPPORTUNITY ENGINE</span>
               <h2>Find what the literature<br /><em>has not answered yet.</em></h2>
               <p>Evidence-grounded analysis across papers, methods, datasets, experiments and research gaps.</p>
-              <div className="search-box"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch}>Explore</button></div>{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any) => <div key={r.id}><strong>{r.title}</strong><span>{r.year || "Year unavailable"}</span></div>)}</div>}
+              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch}>Explore</button></div>{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any) => <div key={r.id}><strong>{r.title}</strong><span>{r.year || "Year unavailable"}</span></div>)}</div>}
             </div>
             <div className="hero-orbit"><div className="orbit-ring ring-1" /><div className="orbit-ring ring-2" /><div className="orbit-core">KG<br /><small>REASONING</small></div><span className="node n1">Papers</span><span className="node n2">Methods</span><span className="node n3">Gaps</span><span className="node n4">Evidence</span></div>
           </section>
@@ -130,7 +131,7 @@ export default function Home() {
 
           <section className="grid-2">
             <div className="panel">
-              <div className="panel-head"><div><span className="label">OPPORTUNITIES</span><h3>Research gaps detected</h3></div><button className="text-btn">View all →</button></div>
+              <div className="panel-head"><div><span className="label">OPPORTUNITIES</span><h3>Research gaps detected</h3></div><a className="text-btn" href="/research-gaps">View all →</a></div>
               <div className="gap-list">{liveGaps.length ? liveGaps.map((g) => <div className="gap-row" key={g.title}><div className="gap-icon">◈</div><div className="gap-main"><strong>{g.title}</strong><span>{g.type} · {g.evidence} evidence links</span></div><div className="score"><b>{g.score}</b><small>DS</small></div></div>) : <p className="muted">{live ? "No research gaps were returned by the API." : "Research gaps will appear when the live API is available."}</p>}</div>
             </div>
 
@@ -153,9 +154,9 @@ export default function Home() {
           <section className="grid-2">
             <div className="panel">
               <div className="panel-head"><div><span className="label">PAPER INTELLIGENCE</span><h3>Recently analyzed</h3></div></div>
-              <div className="paper-list">{livePapers.length ? livePapers.map((p) => <div className="paper" key={p.title}><div className="paper-file">PDF</div><div><strong>{p.title}</strong><span>{p.year || "Year unavailable"} · {(p.tags || []).map((t:string) => <em key={t}>{t}</em>)}</span></div><button>→</button></div>) : <p className="muted">Live paper-list endpoint is not connected on this dashboard yet.</p>}</div>
+              <div className="paper-list">{livePapers.length ? livePapers.map((p) => <div className="paper" key={p.title}><div className="paper-file">PDF</div><div><strong>{p.title}</strong><span>{p.year || "Year unavailable"} · {(p.tags || []).map((t:string) => <em key={t}>{t}</em>)}</span></div><a href="/papers" aria-label="Open papers">→</a></div>) : <p className="muted">Open the Papers workspace to browse your saved PDFs and indexing status. <a href="/papers">Go to Papers →</a></p>}</div>
             </div>
-            <div className="panel opportunity"><span className="label">NEXT DISCOVERY</span><h3>Turn a gap into a hypothesis.</h3><p>Validated gaps can flow into experiment planning, hypothesis generation and evidence-backed research reports.</p><button className="primary">Open Discovery Flow →</button><div className="flow"><span>Gap</span><i>→</i><span>Hypothesis</span><i>→</i><span>Experiment</span></div></div>
+            <div className="panel opportunity"><span className="label">NEXT DISCOVERY</span><h3>Turn a gap into a hypothesis.</h3><p>Validated gaps can flow into experiment planning, hypothesis generation and evidence-backed research reports.</p><a className="primary" href="/hypotheses">Open Discovery Flow →</a><div className="flow"><span>Gap</span><i>→</i><span>Hypothesis</span><i>→</i><span>Experiment</span></div></div>
           </section>
         </div>
       </section>
