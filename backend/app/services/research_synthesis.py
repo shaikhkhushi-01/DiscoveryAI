@@ -51,6 +51,7 @@ async def synthesize_research(
             "query": query,
             "scope": "indexed_corpus",
             "answer": "A multi-paper comparison requires relevant evidence from at least two distinct papers.",
+            "paper_count": paper_count,
             "sources": [],
             "citations": [],
             "limitations": ["Fewer than two distinct papers matched this query in the indexed corpus."],
