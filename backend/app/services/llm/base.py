@@ -15,6 +15,18 @@ def _parse_object(raw: str) -> dict[str, Any]:
         if text.endswith(fence):
             text = text[:-len(fence)].strip()
 
+    # Parse a valid top-level JSON array before searching for embedded objects.
+    # Otherwise a multi-object array could be silently truncated to its first item.
+    if text.startswith("["):
+        try:
+            value = json.loads(text)
+        except json.JSONDecodeError:
+            value = None
+        if isinstance(value, list):
+            if len(value) == 1 and isinstance(value[0], dict):
+                return value[0]
+            raise ValueError("LLM structured response must be a JSON object")
+
     candidates = [text]
     start = text.find("{")
     if start >= 0:
