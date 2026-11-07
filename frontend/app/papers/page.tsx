@@ -192,6 +192,24 @@ export default function PapersPage() {
             {error && <div role="alert" style={{ marginTop: 16, color: "#ff9d9d", fontSize: 12 }}>{error}</div>}
             {notice && <div role="status" className="notice" style={{ marginTop: 16 }}>{notice}</div>}
           </section>
+          <section className="panel" style={{ maxWidth: 920, margin: "18px auto 0" }}>
+            <div className="panel-head"><div><span className="label">PERSISTENT CORPUS</span><h3>Document library</h3><span className="muted">{library.length} saved paper(s)</span></div>
+              <button type="button" className="text-btn" onClick={refreshLibrary} disabled={libraryBusy}>{libraryBusy ? "Refreshing…" : "Refresh status"}</button></div>
+            {libraryError && <div role="alert" style={{ color: "#ff9d9d", fontSize: 12, marginTop: 12 }}>{libraryError}</div>}
+            {!libraryError && library.length === 0 && !libraryBusy && <div className="notice" style={{ marginTop: 12 }}>No saved documents returned yet. Check sign-in or upload a PDF above.</div>}
+            {library.map((paper) => {
+              const job = paper.indexing;
+              const status = job?.status || "Not queued";
+              const failed = status === "failed" || status === "error";
+              const done = status === "completed" || status === "succeeded";
+              return <div key={paper.id} style={{ padding: "14px 0", borderTop: "1px solid #1a2634", display: "grid", gap: 5 }}>
+                <strong style={{ fontSize: 13, color: "#e9edf5" }}>{paper.title || ("Document " + paper.id)}</strong>
+                <span style={{ color: failed ? "#ff9d9d" : done ? "#5ee7c4" : "#e5c477", fontSize: 11 }}>{status} · Document #{paper.id}{job ? " · Job #" + job.job_id : ""}</span>
+                <span style={{ color: "#78869a", fontSize: 11 }}>{paper.page_count ? paper.page_count + " pages" : "Page count unavailable"}{paper.doi ? " · DOI " + paper.doi : ""}{job ? " · Vectors: " + job.vector_status + " · Knowledge graph: " + job.graph_status : ""}</span>
+                {job?.last_error && <span style={{ color: "#ff9d9d", fontSize: 11 }}>Last error: {job.last_error}</span>}
+              </div>;
+            })}
+          </section>
           {items.length > 0 && <section className="panel" style={{ maxWidth: 920, margin: "18px auto 0" }}><div className="panel-head"><div><span className="label">BATCH RESULTS</span><h3>Upload progress</h3></div><span className="muted">{items.filter(x => x.status === "Indexing queued").length}/{items.length} queued</span></div>{items.map((item, i) => <div key={item.name + i} style={{ padding: "12px 0", borderTop: "1px solid #1a2634" }}><strong style={{ display: "block", fontSize: 12 }}>{item.name}</strong><span style={{ color: item.status === "Failed" ? "#ff9d9d" : "#5ee7c4", fontSize: 11 }}>{item.status}</span>{item.message && <p style={{ margin: "4px 0 0", color: "#78869a", fontSize: 10 }}>{item.message}</p>}</div>)}</section>}
         </div>
       </section>
