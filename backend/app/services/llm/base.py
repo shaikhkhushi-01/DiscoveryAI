@@ -5,11 +5,17 @@ import re
 
 
 def _parse_object(raw: str) -> dict[str, Any]:
-    text = raw.strip().lstrip("\\ufeff")
-    text = re.sub(r"^\`\`\`(?:json)?\\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\\s*\`\`\`$", "", text).strip()
-    candidates = [text]
+    text = raw.strip().lstrip(chr(65279))
+    fence = chr(96) * 3
+    if text.startswith(fence):
+        text = text[len(fence):]
+        if text.lower().startswith("json"):
+            text = text[4:]
+        text = text.strip()
+        if text.endswith(fence):
+            text = text[:-len(fence)].strip()
 
+    candidates = [text]
     start = text.find("{")
     if start >= 0:
         depth = 0
@@ -20,7 +26,7 @@ def _parse_object(raw: str) -> dict[str, Any]:
             if quoted:
                 if escaped:
                     escaped = False
-                elif char == "\\\\":
+                elif ord(char) == 92:
                     escaped = True
                 elif char == '"':
                     quoted = False
@@ -35,7 +41,7 @@ def _parse_object(raw: str) -> dict[str, Any]:
                     break
 
     for candidate in candidates:
-        candidate = re.sub(r",\\s*([}\\]])", r"\\1", candidate)
+        candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
         try:
             value = json.loads(candidate)
         except json.JSONDecodeError:
@@ -57,11 +63,10 @@ class LLMProvider(ABC):
         try:
             return _parse_object(raw)
         except ValueError:
-            # One bounded formatting repair; the repair model is instructed not
-            # to infer or add content, and the output is parsed strictly again.
+            # One bounded formatting repair; the model is told not to infer or add content.
             repaired = await self.generate(
                 "Convert this response to one valid JSON object. Preserve only "
-                "the information present. Return JSON only.\\n\\n" + raw[:12000],
+                "the information present. Return JSON only.\n\n" + raw[:12000],
                 system="You are a strict JSON formatter. Do not add facts.",
                 temperature=0.0,
             )
