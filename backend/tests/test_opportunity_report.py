@@ -31,5 +31,6 @@ async def test_report_filters_unknown_evidence_ids(monkeypatch):
     monkeypatch.setattr(opportunity_report, "get_llm_provider", lambda: FakeLLM())
     result = await opportunity_report.build_research_opportunity_report("Possible gap")
     assert result["evidence_synthesis"][0]["evidence_ids"] == ["EVIDENCE 1"]
-    assert result["research_directions"][0]["evidence_ids"] == []
+    # Unsupported directions are dropped rather than returned without evidence.
+    assert result["research_directions"] == []
     assert result["proposed_experiments"][0]["evidence_ids"] == ["EVIDENCE 1"]

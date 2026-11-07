@@ -121,6 +121,10 @@ def infer_paper_title(text: str, metadata_title: str | None = None, filename: st
     candidates: list[str] = []
     for line in lines[:40]:
         line = re.sub(r"^\s*(?:\d+\s*)$", "", line).strip()
+        # A standalone sentence from extracted body text is not a plausible
+        # title candidate; continue to the upload filename fallback instead.
+        if line.endswith((".", "?", "!")) and len(line.split()) >= 4:
+            continue
         if (
             not line
             or len(line) < 8

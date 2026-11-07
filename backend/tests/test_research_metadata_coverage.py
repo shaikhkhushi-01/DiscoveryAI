@@ -97,8 +97,8 @@ def test_existing_placeholder_paper_title_can_be_recovered_from_document_text():
                 "real scientific research PDF",
                 "Provided proper attribution is provided, Google hereby grants permission "
                 "to reproduce the tables and figures in this paper solely for use in "
-                "journalistic or scholarly works.\\nAttention Is All You Need\\n"
-                "Ashish Vaswani, Noam Shazeer\\nAbstract\\nWe propose...",
+                "journalistic or scholarly works.\nAttention Is All You Need\n"
+                "Ashish Vaswani, Noam Shazeer\nAbstract\nWe propose...",
                 '{"metadata":{"title":"real scientific research PDF"}}',
                 "/papers/5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e.pdf",
             )]
@@ -128,17 +128,17 @@ def test_critic_title_recovery_prefers_clean_pdf_title_over_stale_stored_title()
                     "scholarly works.",
                     "Provided proper attribution is provided, Google hereby grants permission "
                     "to reproduce the tables and figures in this paper solely for use in "
-                    "journalistic or scholarly works.\\nAttention Is All You Need\\n"
-                    "Ashish Vaswani, Noam Shazeer, Niki Parmar\\nAbstract\\nWe propose...",
+                    "journalistic or scholarly works.\nAttention Is All You Need\n"
+                    "Ashish Vaswani, Noam Shazeer, Niki Parmar\nAbstract\nWe propose...",
                     '{"metadata":{"title":"scholarly works."}}',
                     "/papers/attention.pdf",
                 ),
                 (
                     2,
                     "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding Jacob Devlin",
-                    "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\\n"
-                    "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova\\n"
-                    "Abstract\\nWe introduce BERT...",
+                    "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\n"
+                    "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova\n"
+                    "Abstract\nWe introduce BERT...",
                     '{"metadata":{"title":"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"}}',
                     "/papers/bert.pdf",
                 ),
