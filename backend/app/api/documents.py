@@ -88,7 +88,6 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
             publication_date=date(extraction["year"], 1, 1) if extraction["year"] else None,
         )
         db.add(paper)
-        db.flush()
         metadata_payload = {
             "metadata": parsed["metadata"],
             "extraction": extraction,
@@ -111,7 +110,7 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
 
         metadata_payload = strip_nul(metadata_payload)
         document = Document(
-            paper_id=paper.id,
+            paper=paper,
             document_type="paper",
             storage_uri=str(path),
             checksum=digest,
