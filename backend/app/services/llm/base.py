@@ -44,7 +44,7 @@ def _parse_object(raw: str) -> dict[str, Any]:
             value = value[0]
         if isinstance(value, dict):
             return value
-    raise ValueError("LLM did not return a valid JSON object")
+    raise ValueError("LLM structured response must be a JSON object")
 
 
 class LLMProvider(ABC):
