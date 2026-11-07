@@ -102,7 +102,7 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
         # Sanitize every nested string before serialization, not just full text.
         def strip_nul(value):
             if isinstance(value, str):
-                return value.replace("\\x00", "")
+                return value.replace(chr(0), "")
             if isinstance(value, list):
                 return [strip_nul(item) for item in value]
             if isinstance(value, dict):
@@ -117,7 +117,7 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
             checksum=digest,
             status="parsed",
             page_count=parsed["page_count"],
-            extracted_text=parsed["text"].replace("\\x00", ""),
+            extracted_text=parsed["text"].replace(chr(0), ""),
             metadata_json=json.dumps(metadata_payload, ensure_ascii=False),
         )
         db.add(document)
