@@ -75,10 +75,18 @@ export default function Home() {
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark">D</span><div><strong>DiscoveryAI</strong><small>Scientific Intelligence</small></div></div>
         <nav>
-          {["Overview", "Research Gaps", "Knowledge Graph", "Papers", "Trends", "Hypotheses", "Experiments"].map((item) => (
-            <button key={item} className={active === item ? "nav-item active" : "nav-item"} onClick={() => item === "Papers" ? (window.location.href = "/papers") : setActive(item)}>
+          {[
+            ["Overview", "/"],
+            ["Research Gaps", "/research-gaps"],
+            ["Knowledge Graph", "/knowledge-graph"],
+            ["Papers", "/papers"],
+            ["Trends", "/trends"],
+            ["Hypotheses", "/hypotheses"],
+            ["Experiments", "/experiments"],
+          ].map(([item, href]) => (
+            <a key={item} href={href} className={item === "Overview" ? "nav-item active" : "nav-item"}>
               <span className="nav-dot" />{item}
-            </button>
+            </a>
           ))}
         </nav>
         <div className="sidebar-bottom">
