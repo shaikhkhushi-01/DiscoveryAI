@@ -14,7 +14,7 @@ from app.models.document import Document
 from app.models.paper import Paper
 from app.models.user import User
 from app.services.document_ingestion import DocumentIngestionError, checksum, process_pdf, store_pdf, validate_pdf
-from app.services.extraction import ScientificExtractor, infer_paper_title
+from app.services.extraction import EXTRACTION_KEYS, ScientificExtractor, infer_paper_title
 from app.services.llm.factory import get_llm_provider
 from app.services.llm.gemini import GeminiUpstreamError
 
@@ -53,7 +53,12 @@ def build_scientific_extraction(
         "year": year,
         "doi": doi,
         "abstract": abstract_section or None,
-        **{key: value if isinstance(value, list) else [] for key, value in extracted_fields.items()},
+        **{
+            key: extracted_fields.get(key, [])
+            if isinstance(extracted_fields.get(key, []), list)
+            else []
+            for key in EXTRACTION_KEYS
+        },
     }
 
 
