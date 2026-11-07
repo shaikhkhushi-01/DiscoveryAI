@@ -149,9 +149,11 @@ def infer_paper_title(text: str, metadata_title: str | None = None, filename: st
     if is_usable_paper_title(inferred, filename):
         return inferred[:500]
 
-    stem = Path(filename or "").stem
+    stem = Path(filename or "").stem.strip()
+    # The filename is an explicit fallback source, so do not reject it merely
+    # because it matches the filename argument passed to the general validator.
+    # Preserve the original stem (including hyphens) for traceability.
     if stem and not re.fullmatch(r"[0-9a-f]{40,64}", stem.lower()):
-        cleaned = re.sub(r"[_-]+", " ", stem).strip()
-        if is_usable_paper_title(cleaned):
-            return cleaned[:500]
+        if is_usable_paper_title(stem):
+            return stem[:500]
     return "Untitled research paper"
