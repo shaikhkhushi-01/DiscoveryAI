@@ -5,6 +5,9 @@ import signal
 import time
 from app.core.config import settings
 from app.core.logging import configure_logging
+# Register ORM relationships before opening worker database sessions.
+import app.models.registry  # noqa: F401
+
 from app.db.session import SessionLocal
 from app.services.indexing import WORKER_POLL_SECONDS, recover_abandoned_jobs, run_once
 
