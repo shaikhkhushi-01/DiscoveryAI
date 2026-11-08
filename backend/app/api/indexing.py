@@ -6,9 +6,7 @@ from app.db.session import get_db
 from app.models.document import Document
 from app.models.indexing_job import IndexingJob
 from app.models.user import User
-from datetime import datetime, timezone
-
-from app.services.indexing import enqueue_indexing, recover_stale_job
+from app.services.indexing import enqueue_indexing, get_indexing_job
 from app.services.vector_store import check_qdrant_connection
 
 router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
@@ -21,7 +19,6 @@ def qdrant_health(current_user: User = Depends(get_current_user)):
     try:
         return check_qdrant_connection()
     except Exception as exc:
-        # Return only exception type/message; Qdrant credentials are never included.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"status": "unreachable", "error_type": type(exc).__name__, "message": str(exc)[:500]},
@@ -64,13 +61,12 @@ def queue_indexing(
 @router.get("/{document_id}/index-status")
 def indexing_status(
     document_id: int,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if not db.get(Document, document_id):
         raise HTTPException(status_code=404, detail="Document not found")
-    job = recover_stale_job(db, document_id)
+    job = get_indexing_job(db, document_id)
     if not job:
         raise HTTPException(status_code=404, detail="No indexing job exists for this document")
 
