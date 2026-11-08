@@ -23,7 +23,8 @@ MAX_ATTEMPTS = 3
 _INDEXING_LOCK = threading.Lock()
 EMBED_BATCH_SIZE = 1
 MAX_ERROR_LENGTH = 4000
-STALE_JOB_SECONDS = 30 * 60
+STALE_JOB_SECONDS = 10 * 60
+WORKER_POLL_SECONDS = 5
 
 
 def enqueue_indexing(db: Session, document_id: int) -> IndexingJob:
@@ -86,6 +87,56 @@ def recover_stale_job(db: Session, document_id: int) -> IndexingJob | None:
 
 def get_indexing_job(db: Session, document_id: int) -> IndexingJob | None:
     return db.scalar(select(IndexingJob).where(IndexingJob.document_id == document_id))
+
+
+def recover_abandoned_jobs(db: Session) -> int:
+    """Requeue jobs whose worker process died; called by the durable worker loop."""
+    now = datetime.now(timezone.utc)
+    stale_before = now.timestamp() - STALE_JOB_SECONDS
+    jobs = db.scalars(
+        select(IndexingJob)
+        .where(IndexingJob.status == "running")
+        .with_for_update(skip_locked=True)
+    ).all()
+    recovered = 0
+    for job in jobs:
+        updated_at = job.updated_at
+        if updated_at is None:
+            is_stale = True
+        else:
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=timezone.utc)
+            is_stale = updated_at.timestamp() < stale_before
+        if not is_stale:
+            continue
+        if job.attempts < MAX_ATTEMPTS:
+            job.status = "retry"
+            job.queued_at = now
+        else:
+            job.status = "failed"
+            job.completed_at = now
+        job.last_error = "Worker lease expired; job recovered by durable worker"
+        job.updated_at = now
+        recovered += 1
+        logger.warning("abandoned indexing job recovered job_id=%s status=%s", job.id, job.status)
+    if recovered:
+        db.commit()
+    return recovered
+
+
+def _heartbeat(job_id: int) -> None:
+    """Refresh the durable lease while a job is actively processing."""
+    db = SessionLocal()
+    try:
+        job = db.get(IndexingJob, job_id)
+        if job is not None and job.status == "running":
+            job.updated_at = datetime.now(timezone.utc)
+            db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("indexing heartbeat failed job_id=%s", job_id)
+    finally:
+        db.close()
 
 
 def claim_next_job(db: Session) -> int | None:
@@ -178,7 +229,7 @@ def _load_payload(document: Document) -> tuple[dict[str, Any], list[dict[str, An
     return graph_extraction, enriched
 
 
-def _index_vectors(chunks: list[dict[str, Any]]) -> int:
+def _index_vectors(chunks: list[dict[str, Any]], job_id: int | None = None) -> int:
     if not chunks:
         raise ValueError("No indexable text chunks found; refusing to mark vector indexing completed")
     provider = get_embedding_provider()
@@ -189,6 +240,8 @@ def _index_vectors(chunks: list[dict[str, Any]]) -> int:
         vectors = provider.embed([chunk["text"] for chunk in batch])
         logger.info("embedding batch completed batch_start=%s vector_count=%s", start, len(vectors))
         total += upsert_chunks(batch, vectors)
+        if job_id is not None:
+            _heartbeat(job_id)
         logger.info("qdrant upsert completed batch_start=%s upserted=%s", start, len(batch))
     return total
 
@@ -244,7 +297,7 @@ def _process_job_unlocked(job_id: int) -> dict[str, Any]:
         db.commit()
         logger.info("vector indexing started job_id=%s chunk_count=%s", job_id, len(chunks))
         try:
-            indexed_chunks = _index_vectors(chunks)
+            indexed_chunks = _index_vectors(chunks, job_id)
             job.vector_status = "completed"
             logger.info("vector indexing completed job_id=%s indexed_chunks=%s", job_id, indexed_chunks)
         except Exception as exc:
@@ -337,8 +390,10 @@ def process_job(job_id: int) -> dict[str, Any]:
 
 
 def run_once() -> dict[str, Any] | None:
+    """Recover abandoned work, atomically claim one queued job, and process it."""
     db = SessionLocal()
     try:
+        recover_abandoned_jobs(db)
         job_id = claim_next_job(db)
     finally:
         db.close()
