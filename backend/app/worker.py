@@ -1,34 +1,45 @@
+"""Durable PostgreSQL-backed indexing worker."""
 from __future__ import annotations
-
-import argparse
+import logging
+import signal
 import time
+from app.core.config import settings
+from app.core.logging import configure_logging
+from app.db.session import SessionLocal
+from app.services.indexing import WORKER_POLL_SECONDS, recover_abandoned_jobs, run_once
 
-# Import the complete model registry before creating database sessions so all
-# SQLAlchemy relationships are resolved in the worker process too.
-import app.models.registry  # noqa: F401
+_running = True
 
-from app.services.indexing import run_once
-
+def _stop(signum, frame):
+    global _running
+    logging.getLogger(__name__).info("worker shutdown requested signal=%s", signum)
+    _running = False
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="DiscoveryAI background indexing worker")
-    parser.add_argument("--once", action="store_true", help="Process at most one queued job and exit")
-    parser.add_argument("--interval", type=float, default=5.0, help="Polling interval in seconds")
-    args = parser.parse_args()
-
-    if args.once:
-        result = run_once()
-        print(result or {"status": "idle"})
-        return
-
-    print("DiscoveryAI indexing worker started")
-    while True:
-        result = run_once()
-        if result is not None:
-            print(result, flush=True)
-        else:
-            time.sleep(max(args.interval, 1.0))
-
+    configure_logging()
+    logger = logging.getLogger("discoveryai.worker")
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    logger.info("durable indexing worker started provider=%s model=%s poll_seconds=%s",
+                settings.embedding_provider, settings.embedding_model, WORKER_POLL_SECONDS)
+    while _running:
+        try:
+            db = SessionLocal()
+            try:
+                recovered = recover_abandoned_jobs(db)
+                if recovered:
+                    logger.warning("worker recovered abandoned jobs count=%s", recovered)
+            finally:
+                db.close()
+            result = run_once()
+            if result is None:
+                time.sleep(WORKER_POLL_SECONDS)
+            else:
+                logger.info("worker processed job result=%s", result)
+        except Exception:
+            logger.exception("worker loop failed; will retry")
+            time.sleep(WORKER_POLL_SECONDS)
+    logger.info("durable indexing worker stopped")
 
 if __name__ == "__main__":
     main()
