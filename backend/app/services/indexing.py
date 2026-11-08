@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 import logging
+import threading
 from typing import Any
 
 from sqlalchemy import select
@@ -18,7 +19,9 @@ from app.services.vector_store import upsert_chunks
 logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 3
-EMBED_BATCH_SIZE = 8
+# Serialize ML work on small Render instances.
+_INDEXING_LOCK = threading.Lock()
+EMBED_BATCH_SIZE = 1
 MAX_ERROR_LENGTH = 4000
 STALE_JOB_SECONDS = 30 * 60
 
@@ -195,7 +198,7 @@ def _error_text(exc: Exception) -> str:
     return f"{type(exc).__name__}: {exc}"[:MAX_ERROR_LENGTH]
 
 
-def process_job(job_id: int) -> dict[str, Any]:
+def _process_job_unlocked(job_id: int) -> dict[str, Any]:
     db = SessionLocal()
     job: IndexingJob | None = None
     try:
@@ -323,6 +326,14 @@ def process_job(job_id: int) -> dict[str, Any]:
         return {"job_id": job_id, "status": "failed", "error": error}
     finally:
         db.close()
+
+
+def process_job(job_id: int) -> dict[str, Any]:
+    """Run one indexing job at a time in this backend process."""
+    logger.info("indexing job waiting for single-worker lock job_id=%s", job_id)
+    with _INDEXING_LOCK:
+        logger.info("indexing job acquired single-worker lock job_id=%s", job_id)
+        return _process_job_unlocked(job_id)
 
 
 def run_once() -> dict[str, Any] | None:
