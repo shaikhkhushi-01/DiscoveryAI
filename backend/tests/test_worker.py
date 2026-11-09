@@ -28,6 +28,9 @@ def test_drain_mode_processes_jobs_until_queue_is_empty(monkeypatch):
     assert processed[-1] is None
 
 
-def test_drain_mode_rejects_non_positive_runtime():
-    with pytest.raises(SystemExit, match="positive integer"):
+def test_drain_mode_rejects_non_positive_runtime(capsys):
+    with pytest.raises(SystemExit) as exc_info:
         worker.main(["--drain", "--max-runtime-seconds", "0"])
+
+    assert exc_info.value.code == 2
+    assert "--max-runtime-seconds must be a positive integer" in capsys.readouterr().err
