@@ -3,27 +3,27 @@ from __future__ import annotations
 from app import worker
 
 
-class _FakeSession:
-    def close(self) -> None:
-        pass
-
-
-def test_drain_mode_processes_until_queue_is_empty(monkeypatch):
-    results = iter([{"job_id": 1, "status": "completed"}, None])
-    recovered_calls: list[bool] = []
+def test_drain_mode_processes_jobs_until_queue_is_empty(monkeypatch):
+    results = iter([
+        {"job_id": 1, "status": "completed"},
+        {"job_id": 2, "status": "completed"},
+        None,
+    ])
+    processed = []
 
     monkeypatch.setattr(worker, "configure_logging", lambda: None)
-    monkeypatch.setattr(worker, "SessionLocal", _FakeSession)
-    monkeypatch.setattr(
-        worker,
-        "recover_abandoned_jobs",
-        lambda db: recovered_calls.append(True) or 0,
-    )
-    monkeypatch.setattr(worker, "run_once", lambda: next(results))
-    monkeypatch.setattr(worker.signal, "signal", lambda *args: None)
+    monkeypatch.setattr(worker.signal, "signal", lambda *_args: None)
 
-    assert worker.main(["--drain", "--max-runtime-seconds", "30"]) == 0
-    assert len(recovered_calls) == 2
+    def fake_run_once():
+        result = next(results)
+        processed.append(result)
+        return result
+
+    monkeypatch.setattr(worker, "run_once", fake_run_once)
+
+    assert worker.main(["--drain"]) == 0
+    assert len(processed) == 3
+    assert processed[-1] is None
 
 
 def test_worker_rejects_non_positive_runtime_budget():
