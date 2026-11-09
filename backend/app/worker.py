@@ -16,8 +16,7 @@ from app.core.logging import configure_logging
 # Register ORM relationships before opening worker database sessions.
 import app.models.registry  # noqa: F401
 
-from app.db.session import SessionLocal
-from app.services.indexing import WORKER_POLL_SECONDS, recover_abandoned_jobs, run_once
+from app.services.indexing import WORKER_POLL_SECONDS, run_once
 
 _running = True
 
@@ -68,14 +67,8 @@ def main(argv: list[str] | None = None) -> int:
             break
 
         try:
-            db = SessionLocal()
-            try:
-                recovered = recover_abandoned_jobs(db)
-                if recovered:
-                    logger.warning("worker recovered abandoned jobs count=%s", recovered)
-            finally:
-                db.close()
-
+            # run_once() recovers expired leases, atomically claims one job,
+            # processes it, and returns None when the durable queue is empty.
             result = run_once()
             if result is None:
                 if args.drain:
@@ -85,9 +78,9 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 logger.info("worker processed job result=%s", result)
         except Exception:
-            logger.exception("worker loop failed; will retry")
+            logger.exception("worker loop failed")
             if args.drain:
-                # Fail this scheduled run visibly; the next schedule can retry
+                # Fail the scheduled run visibly. The next schedule can retry
                 # queued work after stale-job recovery.
                 return 1
             time.sleep(WORKER_POLL_SECONDS)
