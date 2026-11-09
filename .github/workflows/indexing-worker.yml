@@ -2,7 +2,7 @@ name: DiscoveryAI Scheduled Indexing Worker
 
 on:
   schedule:
-    # GitHub scheduled workflows are best-effort and may start a little late.
+    # GitHub schedules are best-effort; runs can start later than this interval.
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
@@ -37,6 +37,10 @@ jobs:
       EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
       EMBEDDING_DIMENSION: "384"
       HF_HOME: ${{ runner.temp }}/huggingface
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
 
     steps:
       - name: Check out repository
@@ -67,6 +71,7 @@ jobs:
           required = (
               "DATABASE_URL",
               "QDRANT_URL",
+              "QDRANT_API_KEY",
               "NEO4J_URI",
               "NEO4J_USERNAME",
               "NEO4J_PASSWORD",
@@ -76,18 +81,20 @@ jobs:
               print("Missing required GitHub Actions secrets: " + ", ".join(missing))
               sys.exit(1)
 
-          forbidden = ("localhost", "127.0.0.1")
           for name in ("DATABASE_URL", "QDRANT_URL", "NEO4J_URI"):
-              if any(host in os.environ[name].lower() for host in forbidden):
+              value = os.environ[name].lower()
+              if "localhost" in value or "127.0.0.1" in value:
                   print(f"{name} points to localhost; refusing to run against a local default.")
                   sys.exit(1)
-          if not os.getenv("QDRANT_API_KEY", "").strip():
-              print("QDRANT_API_KEY is empty; continuing because the Qdrant endpoint may not require authentication.")
+
           print("Required connection secrets are present; values are not displayed.")
           PY
 
+      - name: Install CPU-only PyTorch
+        run: python -m pip install --upgrade pip && pip install torch --index-url https://download.pytorch.org/whl/cpu
+
       - name: Install backend dependencies
-        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Drain pending indexing jobs
         run: python -m app.worker --drain --max-runtime-seconds 21000
