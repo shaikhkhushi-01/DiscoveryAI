@@ -44,9 +44,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _build_parser().parse_args(argv)
+    parser = _build_parser()
+    args = parser.parse_args(argv)
     if args.max_runtime_seconds < 1:
-        raise SystemExit("--max-runtime-seconds must be a positive integer")
+        parser.error("--max-runtime-seconds must be a positive integer")
 
     configure_logging()
     logger = logging.getLogger("discoveryai.worker")
