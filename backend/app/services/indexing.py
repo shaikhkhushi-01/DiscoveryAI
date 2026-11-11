@@ -395,6 +395,25 @@ def run_once() -> dict[str, Any] | None:
     try:
         recover_abandoned_jobs(db)
         job_id = claim_next_job(db)
+        if job_id is None:
+            # Safe aggregate diagnostics: never log connection strings or document contents.
+            from sqlalchemy import func
+            summaries = db.execute(
+                select(IndexingJob.status, IndexingJob.attempts, func.count(IndexingJob.id))
+                .group_by(IndexingJob.status, IndexingJob.attempts)
+                .order_by(IndexingJob.status, IndexingJob.attempts)
+            ).all()
+            logger.info(
+                "indexing queue empty; job_counts_by_status_and_attempts=%s",
+                [{"status": status, "attempts": attempts, "count": count} for status, attempts, count in summaries],
+            )
+            document_counts = db.execute(
+                select(Document.status, func.count(Document.id)).group_by(Document.status).order_by(Document.status)
+            ).all()
+            logger.info(
+                "document_counts_by_status=%s",
+                [{"status": status, "count": count} for status, count in document_counts],
+            )
     finally:
         db.close()
     if job_id is None:
