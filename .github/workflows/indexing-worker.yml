@@ -1,6 +1,14 @@
 name: DiscoveryAI Scheduled Indexing Worker
 
 on:
+  # Run immediately after indexing-worker fixes are merged to main.
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/indexing-worker.yml"
+      - "backend/app/**"
+      - "backend/requirements.txt"
   schedule:
     # GitHub schedules are best-effort; runs can start later than this interval.
     - cron: "*/15 * * * *"
