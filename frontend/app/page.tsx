@@ -10,7 +10,6 @@ export default function Home() {
   const [gapsLoaded, setGapsLoaded] = useState(false);
   const [summary, setSummary] = useState({ papers: 0, concepts: 0, gaps: 0, evidence: 0 });
   const [liveGaps, setLiveGaps] = useState<any[]>([]);
-  const [livePapers, setLivePapers] = useState<any[]>([]);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -128,7 +127,7 @@ export default function Home() {
 
           <section className="stats-grid">
             <Stat label="Papers indexed" value={summary.papers.toLocaleString()} delta={overviewLoaded ? "API result" : "not loaded"} />
-            <Stat label="Documents extracted" value={summary.concepts.toLocaleString()} delta={live ? "live data" : "unavailable"} />
+            <Stat label="Documents extracted" value={summary.concepts.toLocaleString()} delta={overviewLoaded ? "API result" : "not loaded"} />
             <Stat label="Candidate gaps" value={summary.gaps.toLocaleString()} delta={live ? "live data" : "unavailable"} />
             <Stat label="Evidence links" value={summary.evidence.toLocaleString()} delta={live ? "live data" : "unavailable"} />
           </section>
@@ -166,7 +165,4 @@ export default function Home() {
 
 function Stat({label,value,delta}:{label:string,value:string,delta:string}) {
   return <div className="stat"><span>{label}</span><strong>{value}</strong><small>{delta} <i>vs previous period</i></small></div>;
-}
-function GraphNode({x,y,text,kind}:{x:string,y:string,text:string,kind:string}) {
-  return <div className={"graph-node "+kind} style={{left:x,top:y}}><span />{text}</div>;
 }
