@@ -25,7 +25,7 @@ and add:
 
 | Secret name | Value |
 | --- | --- |
-| `DATABASE_URL` | Reachable PostgreSQL connection URL. Use the external Neon/Postgres URL, not a Render private/internal hostname. |
+| `DATABASE_URL` | Supabase **Session Pooler** URI from Project → Connect → Session pooler (host must end in `.pooler.supabase.com`, port normally `5432`). Use the same Supabase project/database as Render. Do not use the direct database hostname or an old Neon URL: GitHub-hosted runners in this workflow need the IPv4-capable pooler. Keep the password private; URL-encode reserved characters such as `@` in the password. |
 | `QDRANT_URL` | Reachable Qdrant endpoint URL. |
 | `QDRANT_API_KEY` | Qdrant API key for the endpoint. |
 | `NEO4J_URI` | Reachable Neo4j Bolt URI (the provider's public Bolt URI). |
@@ -44,8 +44,10 @@ to Qdrant/Neo4j.
 
 ## First run
 
+**Known blocker from the 15 November 2026 runs:** the stored `DATABASE_URL` resolved to an IPv6 address and failed on GitHub-hosted runners with `Network is unreachable`. This is a repository secret/configuration issue, not a worker-code exception. The updated workflow now fails early with a safe instruction if the secret is not the Supabase Session Pooler or has no IPv4 DNS answer. It cannot read or change repository secret values.
+
 1. Merge this workflow into `main`.
-2. Add the repository secrets above.
+2. Add/update the repository secrets above. In particular, replace any old Neon/direct-host `DATABASE_URL` with the Supabase Session Pooler URI. The workflow preflight checks the pooler hostname and IPv4 DNS without printing credentials.
 3. Open **Actions → DiscoveryAI Scheduled Indexing Worker → Run workflow**.
 4. Inspect logs for `durable indexing worker started`, `indexing job claimed`,
    `embedding batch completed`, `vector indexing completed`,
