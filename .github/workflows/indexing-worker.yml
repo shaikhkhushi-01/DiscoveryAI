@@ -74,7 +74,9 @@ jobs:
         run: |
           python - <<'PY'
           import os
+          import socket
           import sys
+          from urllib.parse import urlsplit
 
           required = (
               "DATABASE_URL",
@@ -95,7 +97,33 @@ jobs:
                   print(f"{name} points to localhost; refusing to run against a local default.")
                   sys.exit(1)
 
-          print("Required connection secrets are present; values are not displayed.")
+          # The previous worker secret resolved to IPv6, which GitHub-hosted
+          # runners could not reach. Require the Supabase Session Pooler and
+          # verify IPv4 DNS before downloading the embedding model.
+          parsed = urlsplit(os.environ["DATABASE_URL"])
+          host = parsed.hostname or ""
+          if not host.endswith(".pooler.supabase.com"):
+              print(
+                  "DATABASE_URL must use the current Supabase Session Pooler "
+                  "hostname (*.pooler.supabase.com), not the old Neon or "
+                  "Supabase direct database hostname. Update the GitHub Actions "
+                  "DATABASE_URL secret to the same Supabase pooler database "
+                  "used by the Render API."
+              )
+              sys.exit(1)
+          try:
+              addresses = socket.getaddrinfo(
+                  host, parsed.port or 5432, family=socket.AF_INET,
+                  type=socket.SOCK_STREAM,
+              )
+          except OSError as exc:
+              print(f"Supabase pooler IPv4 DNS lookup failed ({type(exc).__name__}).")
+              sys.exit(1)
+          if not addresses:
+              print("Supabase pooler did not return an IPv4 address; worker cannot connect.")
+              sys.exit(1)
+
+          print("Required secrets are present and Supabase pooler resolves to IPv4; values are not displayed.")
           PY
 
       - name: Install CPU-only PyTorch
