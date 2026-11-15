@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     debug: bool = Field(default=True)
     log_level: str = Field(default="INFO")
     database_url: str = Field(default="postgresql://postgres:postgres@localhost:5432/discoveryai")
+    # Optional IPv4 address override for hosts whose DNS also advertises unreachable IPv6.
+    database_hostaddr: str | None = Field(default=None)
     neo4j_uri: str = Field(default="bolt://localhost:7687")
     neo4j_username: str = Field(default="neo4j")
     neo4j_password: SecretStr = Field(default=SecretStr("change-me"))
