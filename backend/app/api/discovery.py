@@ -27,58 +27,63 @@ def _extraction(payload: dict[str, Any]) -> dict[str, Any]:
     return extracted if isinstance(extracted, dict) else {}
 
 
-def _candidate_gaps(db: Session, limit: int = 10) -> list[dict[str, Any]]:
-    documents = db.query(Document).order_by(Document.id.desc()).all()
+def _analyze_documents(
+    db: Session, limit: int
+) -> tuple[int, list[dict[str, Any]]]:
+    """Read only fields needed for discovery analysis in one corpus scan."""
+    rows = db.query(Document.id, Document.metadata_json).order_by(Document.id.desc()).all()
     candidates: Counter[str] = Counter()
     evidence: dict[str, list[int]] = {}
     kinds: dict[str, str] = {}
+    extracted_count = 0
 
-    for document in documents:
-        extraction = _extraction(_payload(document))
-        for item in extraction.get("limitations", []) or []:
-            text = item.get("text") if isinstance(item, dict) else str(item)
-            if not text:
-                continue
-            key = text.strip()
-            candidates[key] += 1
-            evidence.setdefault(key, []).append(document.id)
-            kinds[key] = "limitation signal"
-        for item in extraction.get("future_work", []) or []:
-            text = item.get("text") if isinstance(item, dict) else str(item)
-            if not text:
-                continue
-            key = text.strip()
-            candidates[key] += 1
-            evidence.setdefault(key, []).append(document.id)
-            kinds[key] = "future-work signal"
+    for document_id, metadata_json in rows:
+        try:
+            payload = json.loads(metadata_json or "{}")
+        except (TypeError, ValueError):
+            payload = {}
+        extraction = _extraction(payload)
+        if extraction:
+            extracted_count += 1
+        for field, signal_type in (
+            ("limitations", "limitation signal"),
+            ("future_work", "future-work signal"),
+        ):
+            for item in extraction.get(field, []) or []:
+                text = item.get("text") if isinstance(item, dict) else str(item)
+                if not text:
+                    continue
+                key = text.strip()
+                if not key:
+                    continue
+                candidates[key] += 1
+                evidence.setdefault(key, []).append(document_id)
+                kinds[key] = signal_type
 
-    rows = []
-    for text, count in candidates.most_common(limit):
-        rows.append(
-            {
-                "title": text,
-                "type": kinds[text],
-                "evidence_count": count,
-                "source_document_ids": sorted(set(evidence[text])),
-                "status": "candidate",
-                "score": min(100, 50 + count * 10),
-                "score_type": "heuristic_candidate_signal",
-            }
-        )
-    return rows
+    gaps = [
+        {
+            "title": text,
+            "type": kinds[text],
+            "evidence_count": count,
+            "source_document_ids": sorted(set(evidence[text])),
+            "status": "candidate",
+            "score": min(100, 50 + count * 10),
+            "score_type": "heuristic_candidate_signal",
+        }
+        for text, count in candidates.most_common(limit)
+    ]
+    return extracted_count, gaps
+
+
+def _candidate_gaps(db: Session, limit: int = 10) -> list[dict[str, Any]]:
+    return _analyze_documents(db, limit)[1]
 
 
 @router.get("/summary")
 def discovery_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
     paper_count = db.query(func.count(Paper.id)).scalar() or 0
     document_count = db.query(func.count(Document.id)).scalar() or 0
-    extracted_count = 0
-
-    for document in db.query(Document).all():
-        if _extraction(_payload(document)):
-            extracted_count += 1
-
-    all_gaps = _candidate_gaps(db, limit=1000)
+    extracted_count, all_gaps = _analyze_documents(db, limit=1000)
     gaps = all_gaps[:5]
     return {
         "source": "live_database",
