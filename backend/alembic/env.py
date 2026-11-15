@@ -20,7 +20,9 @@ def _database_url(value: str) -> str:
     return url.render_as_string(hide_password=False)
 
 
-config.set_main_option("sqlalchemy.url", _database_url(settings.database_url))
+# ConfigParser treats percent signs as interpolation markers. URL-encoded credentials
+# (for example, %40 for @) must be escaped before storing the URL in Alembic config.
+config.set_main_option("sqlalchemy.url", _database_url(settings.database_url).replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
