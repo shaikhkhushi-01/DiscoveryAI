@@ -12,6 +12,8 @@ export default function PapersPage() {
   const [token, setToken] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [files, setFiles] = useState<File[]>([]);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [library, setLibrary] = useState<LibraryItem[]>([]);
@@ -69,7 +71,7 @@ export default function PapersPage() {
       const response = await fetch(API_BASE + "/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || "Login failed. Check your email and password.");
@@ -82,6 +84,27 @@ export default function PapersPage() {
     } finally {
       setAuthBusy(false);
     }
+  }
+
+  async function register(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(""); setNotice(""); setAuthBusy(true);
+    try {
+      const response = await fetch(API_BASE + "/api/v1/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password, full_name: fullName.trim() || null }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 409) throw new Error("This email is already registered in the current database. Switch to Sign in.");
+        throw new Error(data.detail || "Account creation failed.");
+      }
+      setPassword(""); setAuthMode("login");
+      setNotice("Account created successfully. Sign in with this account to upload papers.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Account creation failed.");
+    } finally { setAuthBusy(false); }
   }
 
   async function uploadAll() {
@@ -183,11 +206,13 @@ export default function PapersPage() {
             <p style={{ color: "#8490a2", fontSize: 13, lineHeight: 1.6 }}>Add PDF papers to your private DiscoveryAI corpus. Each file is parsed and then queued for vector and knowledge-graph indexing.</p>
 
             {!token ? (
-              <form onSubmit={login} style={{ display: "grid", gap: 12, maxWidth: 440, marginTop: 24 }}>
-                <div className="notice"><span>i</span><div><strong>Researcher sign-in required</strong><br />The upload and indexing API is protected. Sign in with your DiscoveryAI account to continue.</div></div>
+              <form onSubmit={authMode === "login" ? login : register} style={{ display: "grid", gap: 12, maxWidth: 440, marginTop: 24 }}>
+                <div className="notice"><span>i</span><div><strong>{authMode === "login" ? "Researcher sign-in required" : "Create a researcher account"}</strong><br />{authMode === "login" ? "Use an account in the current database. Older Neon accounts were not automatically migrated." : "Create an account in the current DiscoveryAI database."}</div></div>
+                {authMode === "register" && <label style={{ color: "#aeb9c8", fontSize: 12 }}>Full name (optional)<input type="text" maxLength={150} autoComplete="name" value={fullName} onChange={e => setFullName(e.target.value)} style={fieldStyle} /></label>}
                 <label style={{ color: "#aeb9c8", fontSize: 12 }}>Email<input required type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} style={fieldStyle} /></label>
-                <label style={{ color: "#aeb9c8", fontSize: 12 }}>Password<input required type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} style={fieldStyle} /></label>
-                <button className="primary" disabled={authBusy} type="submit">{authBusy ? "Signing in…" : "Sign in"}</button>
+                <label style={{ color: "#aeb9c8", fontSize: 12 }}>Password<input required type="password" minLength={8} maxLength={128} autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={e => setPassword(e.target.value)} style={fieldStyle} />{authMode === "register" && <small style={{ color: "#78869a" }}>At least 8 characters.</small>}</label>
+                <button className="primary" disabled={authBusy} type="submit">{authBusy ? (authMode === "login" ? "Signing in…" : "Creating account…") : (authMode === "login" ? "Sign in" : "Create account")}</button>
+                <button type="button" className="text-btn" style={{ justifySelf: "start" }} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setError(""); setNotice(""); }}>{authMode === "login" ? "New here? Create account" : "Already registered? Sign in"}</button>
               </form>
             ) : (
               <div style={{ marginTop: 20 }}>

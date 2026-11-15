@@ -42,6 +42,8 @@ export default function WorkspaceSection({ section }: { section: SectionKey }) {
   const [token, setToken] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [question, setQuestion] = useState("");
   const [data, setData] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -92,13 +94,30 @@ export default function WorkspaceSection({ section }: { section: SectionKey }) {
     try {
       const response = await fetch(API_BASE + "/api/v1/auth/login", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.detail || "Sign-in failed. Check your credentials.");
       window.sessionStorage.setItem("discoveryai_access_token", payload.access_token);
       setToken(payload.access_token); setPassword(""); setNotice("Signed in successfully.");
     } catch (e) { setError(e instanceof Error ? e.message : "Sign-in failed."); }
+    finally { setBusy(false); }
+  }
+
+  async function register(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(API_BASE + "/api/v1/auth/register", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password, full_name: fullName.trim() || null }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 409) throw new Error("This email is already registered in the current database. Switch to Sign in.");
+        throw new Error(payload.detail || "Account creation failed.");
+      }
+      setPassword(""); setAuthMode("login"); setNotice("Account created. Sign in to continue.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Account creation failed."); }
     finally { setBusy(false); }
   }
 
@@ -141,11 +160,13 @@ export default function WorkspaceSection({ section }: { section: SectionKey }) {
             <h2 style={{ font: "600 25px 'Space Grotesk'", margin: "8px 0" }}>{config.title}</h2>
             <p style={{ color: "#8490a2", fontSize: 12, lineHeight: 1.7, maxWidth: 850 }}>{config.description}</p>
             {config.protected && !token ? (
-              <form onSubmit={signIn} style={{ display: "grid", gap: 12, maxWidth: 430, marginTop: 22 }}>
-                <div className="notice"><span>i</span><div><strong>Sign in required</strong><br />This research API requires your DiscoveryAI researcher account.</div></div>
+              <form onSubmit={authMode === "login" ? signIn : register} style={{ display: "grid", gap: 12, maxWidth: 430, marginTop: 22 }}>
+                <div className="notice"><span>i</span><div><strong>{authMode === "login" ? "Sign in required" : "Create a researcher account"}</strong><br />{authMode === "login" ? "Use an account in the current database. Older Neon accounts were not automatically migrated." : "Create an account in the current DiscoveryAI database to use protected research tools."}</div></div>
+                {authMode === "register" && <label style={labelStyle}>Full name (optional)<input type="text" maxLength={150} autoComplete="name" value={fullName} onChange={e=>setFullName(e.target.value)} style={inputStyle}/></label>}
                 <label style={labelStyle}>Email<input type="email" required autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} style={inputStyle}/></label>
-                <label style={labelStyle}>Password<input type="password" required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} style={inputStyle}/></label>
-                <button className="primary" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+                <label style={labelStyle}>Password<input type="password" required minLength={8} maxLength={128} autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={e=>setPassword(e.target.value)} style={inputStyle}/>{authMode === "register" && <small className="muted">At least 8 characters.</small>}</label>
+                <button className="primary" disabled={busy}>{busy ? (authMode === "login" ? "Signing in…" : "Creating account…") : (authMode === "login" ? "Sign in" : "Create account")}</button>
+                <button type="button" className="text-btn" style={{justifySelf:"start"}} onClick={()=>{setAuthMode(authMode === "login" ? "register" : "login");setError("");setNotice("");}}>{authMode === "login" ? "New here? Create account" : "Already registered? Sign in"}</button>
               </form>
             ) : needsAction ? (
               <form onSubmit={runAction} style={{ display: "grid", gap: 12, maxWidth: 800, marginTop: 22 }}>

@@ -245,3 +245,16 @@ A successful `/health` response proves that the API process responds; it does **
 - Keep raw annotations, adjudication, and test labels separate.
 - Record model/provider, prompt, embedding, retrieval configuration, code revision, corpus, benchmark, split, and random seed for every run.
 - Report negative results and limitations; do not tune on the held-out test set.
+
+
+## Submission package
+
+The current submission materials are maintained in [`docs/submission/`](docs/submission/):
+
+- [Project report draft](docs/submission/PROJECT_REPORT.md) — abstract, problem, objectives, related-work context, methodology, architecture, evaluation plan, limitations, and conclusion.
+- [Architecture and data flow](docs/submission/ARCHITECTURE.md) — Mermaid system diagram and workflow descriptions.
+- [Scientific evaluation status](docs/submission/EVALUATION_STATUS.md) — implemented tooling versus pending empirical evidence.
+- [Presentation outline](docs/submission/PRESENTATION_OUTLINE.md) — 10-slide structure and integrity rules.
+- [Demo script](docs/submission/DEMO_SCRIPT.md) — 7–9 minute walkthrough using verified live data.
+
+These are submission drafts. Complete empirical results, a populated expert-adjudicated benchmark, and verified production end-to-end evidence must be added before describing the project as scientifically validated or fully production-ready.
