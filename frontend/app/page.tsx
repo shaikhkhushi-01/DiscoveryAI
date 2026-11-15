@@ -154,7 +154,7 @@ export default function Home() {
           <section className="grid-2">
             <div className="panel">
               <div className="panel-head"><div><span className="label">PAPER INTELLIGENCE</span><h3>Recently analyzed</h3></div></div>
-              <div className="paper-list"><p className="muted">Recent-paper feed is not connected to a public live endpoint yet. <a href="/papers">Open your private document library →</a></p></div><div><strong>{p.title}</strong><span>{p.year || "Year unavailable"} · {(p.tags || []).map((t:string) => <em key={t}>{t}</em>)}</span></div><a href="/papers" aria-label="Open papers">→</a></div>) : <p className="muted">Open the Papers workspace to browse your saved PDFs and indexing status. <a href="/papers">Go to Papers →</a></p>}</div>
+              <div className="paper-list"><p className="muted">Recent-paper feed is not connected to a public live endpoint yet. <a href="/papers">Open your private document library →</a></p></div>
             </div>
             <div className="panel opportunity"><span className="label">NEXT DISCOVERY</span><h3>Turn a gap into a hypothesis.</h3><p>Validated gaps can flow into experiment planning, hypothesis generation and evidence-backed research reports.</p><a className="primary" href="/hypotheses">Open Discovery Flow →</a><div className="flow"><span>Gap</span><i>→</i><span>Hypothesis</span><i>→</i><span>Experiment</span></div></div>
           </section>
