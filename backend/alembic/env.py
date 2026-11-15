@@ -13,6 +13,10 @@ def _database_url(value: str) -> str:
     url = make_url(value)
     if url.drivername in {"postgresql", "postgres"}:
         url = url.set(drivername="postgresql+psycopg")
+    # Match the application engine: keep the hostname for TLS verification,
+    # but force libpq to connect to the configured IPv4 address.
+    if settings.database_hostaddr:
+        url = url.update_query_dict({"hostaddr": settings.database_hostaddr})
     return url.render_as_string(hide_password=False)
 
 
