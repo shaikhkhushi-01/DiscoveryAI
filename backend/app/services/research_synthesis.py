@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import re
 
 from app.services.llm.factory import get_llm_provider
 from app.services.retrieval.hybrid import hybrid_search
@@ -19,6 +20,15 @@ def _clean_ids(value: Any, allowed: set[str]) -> list[str]:
     if not isinstance(value, list):
         return []
     return list(dict.fromkeys(str(x).strip() for x in value if str(x).strip() in allowed))
+
+
+def _sanitize_inline_evidence(text: str, allowed: set[str]) -> str:
+    """Remove inline evidence markers that do not map to retrieved source records."""
+    marker = re.compile(r"\[EVIDENCE\s+\d+\]")
+    return marker.sub(
+        lambda match: match.group(0) if match.group(0)[1:-1] in allowed else "",
+        text,
+    )
 
 
 async def synthesize_research(
@@ -120,7 +130,7 @@ do not infer missing paper metadata; do not fabricate comparisons; if a requeste
 is not reported, state that it was not found in the retrieved excerpts.
 """
     result = await get_llm_provider().structured(prompt, system=SYSTEM, temperature=0.0)
-    answer = str(result.get("answer") or "").strip()
+    answer = _sanitize_inline_evidence(str(result.get("answer") or "").strip(), allowed)
     if not answer:
         raise ValueError("Research synthesis provider returned an empty answer")
 
@@ -130,7 +140,7 @@ is not reported, state that it was not found in the retrieved excerpts.
             ids = _clean_ids(section.get("evidence_ids"), allowed)
             sections.append({
                 "heading": str(section.get("heading") or ""),
-                "content": str(section.get("content") or ""),
+                "content": _sanitize_inline_evidence(str(section.get("content") or ""), allowed),
                 "evidence_ids": ids,
             })
     comparisons = []
@@ -139,7 +149,7 @@ is not reported, state that it was not found in the retrieved excerpts.
             ids = _clean_ids(comparison.get("evidence_ids"), allowed)
             comparisons.append({
                 "dimension": str(comparison.get("dimension") or ""),
-                "findings": str(comparison.get("findings") or ""),
+                "findings": _sanitize_inline_evidence(str(comparison.get("findings") or ""), allowed),
                 "evidence_ids": ids,
             })
     return {

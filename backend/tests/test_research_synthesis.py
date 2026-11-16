@@ -68,3 +68,39 @@ async def test_synthesis_validates_citations_and_returns_source_metadata():
     assert result["sections"][0]["evidence_ids"] == ["EVIDENCE 1"]
     assert result["sources"][0]["paper_id"] == 11
     assert result["sources"][0]["chunk_id"] == "chunk-a"
+
+
+
+@pytest.mark.asyncio
+async def test_synthesis_removes_fabricated_inline_evidence_markers():
+    class FakeProvider:
+        async def structured(self, prompt, *, system, temperature):
+            return {
+                "answer": "Supported claim [EVIDENCE 1]. Unsupported claim [EVIDENCE 999].",
+                "sections": [{
+                    "heading": "Findings",
+                    "content": "Supported [EVIDENCE 1]; fabricated [EVIDENCE 999].",
+                    "evidence_ids": ["EVIDENCE 1"],
+                }],
+                "comparisons": [],
+                "citations": ["EVIDENCE 1"],
+                "limitations": [],
+            }
+
+    item = {
+        "paper_id": 21, "document_id": 8, "chunk_id": "chunk-1",
+        "title": "A Study", "section": "Results",
+        "text": "The study reports a measured result.", "score": 0.8,
+    }
+    with (
+        patch.object(research_synthesis, "hybrid_search", return_value=[item]),
+        patch.object(research_synthesis, "rerank", side_effect=lambda q, items, limit: items),
+        patch.object(research_synthesis, "get_llm_provider", return_value=FakeProvider()),
+    ):
+        result = await research_synthesis.synthesize_research(
+            "Summarize measured results", mode="literature_review", limit=5
+        )
+
+    assert "[EVIDENCE 1]" in result["answer"]
+    assert "[EVIDENCE 999]" not in result["answer"]
+    assert "[EVIDENCE 999]" not in result["sections"][0]["content"]
