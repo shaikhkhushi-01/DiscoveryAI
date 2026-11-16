@@ -1,0 +1,56 @@
+name: Enrich and audit NLP corpus candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful OpenAlex discovery workflow run ID
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download source discovery artifact
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = Number("${{ inputs.source_run_id }}");
+            if (!Number.isSafeInteger(runId) || runId <= 0) throw new Error("Invalid source_run_id");
+            const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner, repo: context.repo.repo, run_id: runId
+            });
+            const artifact = artifacts.artifacts.find(a => a.name.startsWith("openalex-nlp-discovery-") && !a.expired);
+            if (!artifact) throw new Error("No unexpired OpenAlex discovery artifact found for source run");
+            const { data } = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner, repo: context.repo.repo,
+              artifact_id: artifact.id, archive_format: "zip"
+            });
+            require("fs").writeFileSync("source-discovery.zip", Buffer.from(data));
+      - name: Extract source artifact
+        run: |
+          mkdir -p data/raw/openalex_discovery
+          python -c "import zipfile; zipfile.ZipFile('source-discovery.zip').extractall('data/raw/openalex_discovery')"
+          test -s data/raw/openalex_discovery/candidate_pool.jsonl
+      - name: Enrich abstracts, triage relevance, check URLs, and build screening ledger
+        run: |
+          python scripts/corpus/enrich_and_screen_nlp_candidates.py \\
+            --input data/raw/openalex_discovery/candidate_pool.jsonl \\
+            --out data/processed/nlp_corpus_snapshot
+      - name: Upload auditable provisional corpus snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlp-corpus-provisional-${{ inputs.source_run_id }}
+          path: data/processed/nlp_corpus_snapshot/
+          retention-days: 90
