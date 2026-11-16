@@ -45,9 +45,7 @@ jobs:
           test -s data/raw/openalex_discovery/candidate_pool.jsonl
       - name: Enrich abstracts, triage relevance, check URLs, and build screening ledger
         run: |
-          python scripts/corpus/enrich_and_screen_nlp_candidates.py \\
-            --input data/raw/openalex_discovery/candidate_pool.jsonl \\
-            --out data/processed/nlp_corpus_snapshot
+          python scripts/corpus/enrich_and_screen_nlp_candidates.py --input data/raw/openalex_discovery/candidate_pool.jsonl --out data/processed/nlp_corpus_snapshot
       - name: Upload auditable provisional corpus snapshot
         uses: actions/upload-artifact@v4
         with:
