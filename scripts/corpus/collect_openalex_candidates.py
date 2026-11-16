@@ -74,8 +74,13 @@ def request_page(params: dict[str, str], retries: int = 5) -> tuple[bytes, dict[
                 raw = response.read()
                 return raw, json.loads(raw.decode("utf-8"))
         except urllib.error.HTTPError as exc:
+            # Preserve the API's response body; it usually identifies invalid
+            # filters/parameters far more clearly than the HTTP status alone.
+            detail = exc.read().decode("utf-8", errors="replace").strip()
             if exc.code not in (429, 500, 502, 503, 504) or attempt == retries - 1:
-                raise
+                raise RuntimeError(
+                    f"OpenAlex HTTP {exc.code} {exc.reason}: {detail[:2000]}"
+                ) from exc
             time.sleep(min(2 ** attempt, 30))
         except (urllib.error.URLError, TimeoutError):
             if attempt == retries - 1:
@@ -107,24 +112,23 @@ def main() -> int:
     page_log: list[dict[str, Any]] = []
 
     for query_index, query in enumerate(QUERIES, start=1):
-        cursor = "*"
-        query_count = 0
-        page_number = 0
-        while cursor and query_count < args.max_per_query:
-            page_number += 1
-            params = {
-                "search": query,
-                "filter": (
-                    f"from_publication_date:{args.from_date},"
-                    f"to_publication_date:{args.to_date},type:article|preprint|proceedings-article"
-                ),
-                "per_page": str(min(100, args.max_per_query - query_count)),
-                "cursor": cursor,
-                "select": SELECT,
-            }
-            if args.email:
-                params["mailto"] = args.email
-            raw, payload = request_page(params)
+        # The workflow deliberately caps each query at 100 records. Use
+        # OpenAlex basic paging for this single-page collection: unauthenticated
+        # cursor paging is limited and can fail when following next_cursor.
+        page_number = 1
+        params = {
+            "search": query,
+            "filter": (
+                f"from_publication_date:{args.from_date},"
+                f"to_publication_date:{args.to_date},type:article|preprint|proceedings-article"
+            ),
+            "per_page": str(args.max_per_query),
+            "page": "1",
+            "select": SELECT,
+        }
+        if args.email:
+            params["mailto"] = args.email
+        raw, payload = request_page(params)
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             raw_name = f"q{query_index:02d}_page{page_number:03d}_{stamp}.json"
             (raw_dir / raw_name).write_bytes(raw)
@@ -156,10 +160,6 @@ def main() -> int:
                     info = collected[key]["_discovery"]
                     if query_index not in info["query_indices"]:
                         info["query_indices"].append(query_index)
-            query_count += len(results)
-            cursor = (payload.get("meta") or {}).get("next_cursor")
-            if not results:
-                break
             time.sleep(max(0.0, args.pause_seconds))
 
     records = sorted(
