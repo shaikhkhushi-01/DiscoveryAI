@@ -211,9 +211,7 @@ def main():
     (out/"api_errors.json").write_text(json.dumps(errors,indent=2),encoding="utf-8")
     (out/"snapshot_report.json").write_text(json.dumps(summary,indent=2),encoding="utf-8")
     (out/"SHA256SUMS.txt").write_text(
-      f'{summary["manifest_sha256"]}  candidate_manifest.jsonl
-{summary["screening_ledger_sha256"]}  screening_ledger.csv
-',encoding="utf-8")
+      f'{summary["manifest_sha256"]}  candidate_manifest.jsonl\\n{summary["screening_ledger_sha256"]}  screening_ledger.csv\\n',encoding="utf-8")
     print(json.dumps(summary,indent=2))
     # Retrieval failures are reported but don't hide partial auditable output.
     return 0
