@@ -129,38 +129,38 @@ def main() -> int:
         if args.email:
             params["mailto"] = args.email
         raw, payload = request_page(params)
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            raw_name = f"q{query_index:02d}_page{page_number:03d}_{stamp}.json"
-            (raw_dir / raw_name).write_bytes(raw)
-            results = payload.get("results") or []
-            page_log.append({
-                "query_index": query_index,
-                "query": query,
-                "page": page_number,
-                "retrieved_at_utc": utc_now(),
-                "request_parameters": params,
-                "result_count": len(results),
-                "raw_response_file": f"raw_pages/{raw_name}",
-                "raw_response_sha256": sha256_bytes(raw),
-                "openalex_meta": payload.get("meta", {}),
-            })
-            for record in results:
-                key = dedup_key(record)
-                if key not in collected:
-                    record["_discovery"] = {
-                        "query_indices": [query_index],
-                        "dedup_key": key,
-                        "screening_status": "not_screened",
-                        "screening_reason": "",
-                        "full_text_rights_status": "not_verified",
-                        "full_text_access_status": "not_checked",
-                    }
-                    collected[key] = record
-                else:
-                    info = collected[key]["_discovery"]
-                    if query_index not in info["query_indices"]:
-                        info["query_indices"].append(query_index)
-            time.sleep(max(0.0, args.pause_seconds))
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        raw_name = f"q{query_index:02d}_page{page_number:03d}_{stamp}.json"
+        (raw_dir / raw_name).write_bytes(raw)
+        results = payload.get("results") or []
+        page_log.append({
+            "query_index": query_index,
+            "query": query,
+            "page": page_number,
+            "retrieved_at_utc": utc_now(),
+            "request_parameters": params,
+            "result_count": len(results),
+            "raw_response_file": f"raw_pages/{raw_name}",
+            "raw_response_sha256": sha256_bytes(raw),
+            "openalex_meta": payload.get("meta", {}),
+        })
+        for record in results:
+            key = dedup_key(record)
+            if key not in collected:
+                record["_discovery"] = {
+                    "query_indices": [query_index],
+                    "dedup_key": key,
+                    "screening_status": "not_screened",
+                    "screening_reason": "",
+                    "full_text_rights_status": "not_verified",
+                    "full_text_access_status": "not_checked",
+                }
+                collected[key] = record
+            else:
+                info = collected[key]["_discovery"]
+                if query_index not in info["query_indices"]:
+                    info["query_indices"].append(query_index)
+        time.sleep(max(0.0, args.pause_seconds))
 
     records = sorted(
         collected.values(),
