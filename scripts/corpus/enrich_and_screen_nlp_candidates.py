@@ -174,8 +174,7 @@ def main():
         row.setdefault("version_dedup_decision","no_exact_title_author_match_found")
     enriched.sort(key=lambda x:x.get("openalex_id") or "")
     manifest_path=out/"candidate_manifest.jsonl"
-    payload="".join(json.dumps(r,ensure_ascii=False,sort_keys=True)+"
-" for r in enriched).encode()
+    payload="".join(json.dumps(r,ensure_ascii=False,sort_keys=True)+"\\n" for r in enriched).encode()
     manifest_path.write_bytes(payload)
     ledger=out/"screening_ledger.csv"
     cols=["openalex_id","doi","title","publication_year","type","language","abstract_status",
