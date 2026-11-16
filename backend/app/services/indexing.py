@@ -41,9 +41,13 @@ def enqueue_indexing(db: Session, document_id: int) -> IndexingJob:
         # Never reset a live job: doing so can launch two concurrent indexers.
         if job.status == "running" and _is_job_fresh(job, now):
             return job
+        # Preserve completed vector indexing on retry. A graph-only failure
+        # (for example, a temporary Neo4j DNS outage) must not re-embed and
+        # re-upload every chunk to Qdrant.
+        vectors_already_indexed = job.vector_status == "completed"
         job.status = "queued"
         job.attempts = 0
-        job.vector_status = "pending"
+        job.vector_status = "completed" if vectors_already_indexed else "pending"
         job.graph_status = "pending"
         job.last_error = None
         job.queued_at = now
@@ -292,21 +296,26 @@ def _process_job_unlocked(job_id: int) -> dict[str, Any]:
 
         # Persist each stage transition before doing expensive work. If the
         # process is killed, status shows which stage was in progress.
-        job.vector_status = "running"
-        job.updated_at = datetime.now(timezone.utc)
-        db.commit()
-        logger.info("vector indexing started job_id=%s chunk_count=%s", job_id, len(chunks))
-        try:
-            indexed_chunks = _index_vectors(chunks, job_id)
-            job.vector_status = "completed"
-            logger.info("vector indexing completed job_id=%s indexed_chunks=%s", job_id, indexed_chunks)
-        except Exception as exc:
-            job.vector_status = "failed"
-            errors.append(f"vector: {_error_text(exc)}")
-            logger.exception("vector indexing failed job_id=%s", job_id)
-        finally:
+        if job.vector_status == "completed":
+            # This is a graph-stage retry. Keep the existing Qdrant vectors and
+            # avoid repeating embedding work for an already successful stage.
+            logger.info("vector indexing skipped; already completed job_id=%s", job_id)
+        else:
+            job.vector_status = "running"
             job.updated_at = datetime.now(timezone.utc)
             db.commit()
+            logger.info("vector indexing started job_id=%s chunk_count=%s", job_id, len(chunks))
+            try:
+                indexed_chunks = _index_vectors(chunks, job_id)
+                job.vector_status = "completed"
+                logger.info("vector indexing completed job_id=%s indexed_chunks=%s", job_id, indexed_chunks)
+            except Exception as exc:
+                job.vector_status = "failed"
+                errors.append(f"vector: {_error_text(exc)}")
+                logger.exception("vector indexing failed job_id=%s", job_id)
+            finally:
+                job.updated_at = datetime.now(timezone.utc)
+                db.commit()
 
         job.graph_status = "running"
         job.updated_at = datetime.now(timezone.utc)
