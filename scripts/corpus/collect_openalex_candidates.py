@@ -21,10 +21,10 @@ from typing import Any
 
 BASE_URL = "https://api.openalex.org/works"
 QUERIES = [
-    '"natural language processing" AND (transformer OR "language model")',
-    '"large language model" AND (evaluation OR benchmark OR reasoning)',
-    '"language models" AND (retrieval OR "question answering" OR summarization)',
-    '"neural machine translation" OR "text generation" OR "information extraction"',
+    'natural language processing transformer language model',
+    'large language model evaluation benchmark reasoning',
+    'language models retrieval question answering summarization',
+    'neural machine translation text generation information extraction',
 ]
 SELECT = ",".join([
     "id", "doi", "title", "publication_date", "publication_year", "type",
@@ -94,8 +94,8 @@ def main() -> int:
     parser.add_argument("--pause-seconds", type=float, default=0.15)
     args = parser.parse_args()
 
-    if args.max_per_query < 1 or args.max_per_query > 5000:
-        parser.error("--max-per-query must be between 1 and 5000")
+    if args.max_per_query < 1 or args.max_per_query > 100:
+        parser.error("--max-per-query must be between 1 and 100 (one free unauthenticated API page per query)")
     if args.from_date > args.to_date:
         parser.error("--from-date must be on or before --to-date")
 
