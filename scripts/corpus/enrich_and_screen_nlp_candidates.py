@@ -40,22 +40,42 @@ def reconstruct(index):
         for pos in positions or []:
             tokens.append((int(pos), word))
     return " ".join(w for _,w in sorted(tokens))
-def get_work(openalex_id, retries=4):
+
+_request_lock = __import__("threading").Lock()
+_next_request_at = 0.0
+
+def get_work(openalex_id, retries=7, pause_seconds=0.25):
+    global _next_request_at
     wid = openalex_id.rstrip("/").split("/")[-1]
     url = API + quote(wid, safe="")
     for attempt in range(retries):
+        # One shared gate paces requests across all worker threads.
+        with _request_lock:
+            wait = _next_request_at - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            _next_request_at = time.monotonic() + pause_seconds
         try:
             req=Request(url, headers={"User-Agent":UA, "Accept":"application/json"})
             with urlopen(req, timeout=35) as r:
                 return json.loads(r.read().decode("utf-8")), None
         except HTTPError as e:
-            detail=e.read(1000).decode("utf-8","replace")
+            detail=e.read(1500).decode("utf-8","replace")
             if e.code in (429,500,502,503,504) and attempt < retries-1:
-                time.sleep(2**attempt); continue
+                retry_after = e.headers.get("Retry-After") if e.headers else None
+                try:
+                    wait = max(0.5, min(60.0, float(retry_after))) if retry_after else min(30, 2 ** attempt)
+                except ValueError:
+                    wait = min(30, 2 ** attempt)
+                time.sleep(wait)
+                continue
             return None, f"HTTP {e.code}: {detail}"
         except (URLError, TimeoutError, json.JSONDecodeError) as e:
-            if attempt < retries-1: time.sleep(2**attempt); continue
+            if attempt < retries-1:
+                time.sleep(min(30, 2 ** attempt)); continue
             return None, str(e)
+    return None, "request retries exhausted"
+
 def check_url(url):
     if not url: return {"status":"no_url","http_status":None,"final_url":None}
     try:
@@ -74,12 +94,17 @@ def relevance(title, abstract, topics, keywords, language):
         " ".join(t.get("display_name","") for t in (topics or [])),
         " ".join(k.get("display_name","") for k in (keywords or []))]).lower()
     hits=[t for t in TERMS["nlp"] if t in text]
-    negatives=[t for t in TERMS["out_of_scope"] if t in (title or "").lower()]
+    out_of_scope_title_terms=[t for t in [
+        "clinical trial", "medical diagnosis", "patient outcome", "electronic health record",
+        "drug discovery", "protein folding", "robotics", "autonomous vehicle",
+        "climate model", "weather forecasting", "geoscience"
+    ] if t in (title or "").lower()]
     if language not in (None,"en"): return "manual_language_review", hits
-    if negatives and not hits: return "likely_out_of_scope_manual_review", hits
+    if out_of_scope_title_terms and len(hits)<2: return "likely_out_of_scope_manual_review", hits
     if len(hits)>=2 or any(t in (title or "").lower() for t in TERMS["nlp"]):
         return "likely_in_scope_manual_confirmation", hits
     return "uncertain_manual_review", hits
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--input",default="data/raw/openalex_discovery/candidate_pool.jsonl")
@@ -88,7 +113,7 @@ def main():
     src=Path(args.input); out=Path(args.out); out.mkdir(parents=True,exist_ok=True)
     candidates=read_jsonl(src)
     enriched=[]; errors=[]
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
         futures={ex.submit(get_work,r.get("id","")):r for r in candidates}
         for fut in concurrent.futures.as_completed(futures):
             base=futures[fut]; work,err=fut.result()
@@ -128,15 +153,36 @@ def main():
               "enrichment_error":err
             }
             enriched.append(row)
+    # Flag possible preprint/published versions by exact normalized title + first author.
+    # Never collapse automatically: a human must confirm intellectual-work identity.
+    from collections import defaultdict
+    groups=defaultdict(list)
+    def norm(value): return re.sub(r"[^a-z0-9]+"," ",(value or "").casefold()).strip()
+    for row in enriched:
+        authors=row.get("authors") or []
+        key=(norm(row.get("title")), norm(authors[0] if authors else ""))
+        if key[0] and key[1]: groups[key].append(row)
+    for key, rows in groups.items():
+        years=[r.get("publication_year") for r in rows if r.get("publication_year")]
+        if len(rows)>1 and (not years or max(years)-min(years)<=2):
+            gid="possible-version-"+hashlib.sha256("|".join(key).encode()).hexdigest()[:12]
+            for row in rows:
+                row["possible_version_group"]=gid
+                row["version_dedup_decision"]="human_review_pending"
+    for row in enriched:
+        row.setdefault("possible_version_group",None)
+        row.setdefault("version_dedup_decision","no_exact_title_author_match_found")
     enriched.sort(key=lambda x:x.get("openalex_id") or "")
     manifest_path=out/"candidate_manifest.jsonl"
-    payload="".join(json.dumps(r,ensure_ascii=False,sort_keys=True)+"\n" for r in enriched).encode()
+    payload="".join(json.dumps(r,ensure_ascii=False,sort_keys=True)+"
+" for r in enriched).encode()
     manifest_path.write_bytes(payload)
     ledger=out/"screening_ledger.csv"
     cols=["openalex_id","doi","title","publication_year","type","language","abstract_status",
           "relevance_triage","manual_relevance_decision","full_text_access_status",
           "candidate_pdf_url","candidate_landing_page_url","license_claims_openalex",
-          "license_rights_status","rights_reviewer_decision","rights_evidence_url"]
+          "license_rights_status","rights_reviewer_decision","rights_evidence_url",
+          "possible_version_group","version_dedup_decision"]
     with ledger.open("w",newline="",encoding="utf-8") as f:
         w=csv.DictWriter(f,fieldnames=cols); w.writeheader()
         for r in enriched:
@@ -152,9 +198,12 @@ def main():
       "access_check_counts":dict(__import__("collections").Counter(r["access_check"]["status"] for r in enriched)),
       "license_status_counts":dict(__import__("collections").Counter(r["license_rights_status"] for r in enriched)),
       "manual_relevance_pending":len(enriched),"rights_review_pending":len(enriched),
+      "possible_version_groups":len({r["possible_version_group"] for r in enriched if r.get("possible_version_group")}),
+      "version_dedup_review_pending":sum(bool(r.get("possible_version_group")) for r in enriched),
       "manifest_sha256":sha256(payload),"screening_ledger_sha256":sha256(ledger.read_bytes()),
       "freeze_status":"PROVISIONAL_DISCOVERY_SNAPSHOT_ONLY_NOT_AN_ELIGIBLE_CORPUS",
       "limitations":["Keyword/topic relevance is triage only, not a validated classifier or human screening.",
+       "Possible preprint/published-version matches are flagged for review and never automatically collapsed.",
        "URL reachability does not verify full-text completeness or lawful access.",
        "OpenAlex license labels are metadata claims and are not independently verified legal permissions.",
        "Every candidate requires human relevance and rights review before final corpus eligibility."]
@@ -162,7 +211,7 @@ def main():
     (out/"api_errors.json").write_text(json.dumps(errors,indent=2),encoding="utf-8")
     (out/"snapshot_report.json").write_text(json.dumps(summary,indent=2),encoding="utf-8")
     (out/"SHA256SUMS.txt").write_text(
-      f'{summary["manifest_sha256"]}  candidate_manifest.jsonl\n{summary["screening_ledger_sha256"]}  screening_ledger.csv\n',encoding="utf-8")
+      f'{summary["manifest_sha256"]}  candidate_manifest.jsonl\\n{summary["screening_ledger_sha256"]}  screening_ledger.csv\\n',encoding="utf-8")
     print(json.dumps(summary,indent=2))
     # Retrieval failures are reported but don't hide partial auditable output.
     return 0
