@@ -120,7 +120,7 @@ def main() -> int:
             "search": query,
             "filter": (
                 f"from_publication_date:{args.from_date},"
-                f"to_publication_date:{args.to_date},type:article|preprint|proceedings-article"
+                f"to_publication_date:{args.to_date},type:article|preprint|conference-paper"
             ),
             "per_page": str(args.max_per_query),
             "page": "1",
