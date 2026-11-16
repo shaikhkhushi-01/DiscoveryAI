@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       max_per_query:
-        description: Maximum metadata records to retrieve per search query (1-500)
+        description: Maximum metadata records to retrieve per search query (1-100)
         required: true
         default: "100"
       from_date:
@@ -42,8 +42,8 @@ jobs:
           python - <<'PY'
           import os
           value = int(os.environ["MAX_PER_QUERY"])
-          if not 1 <= value <= 500:
-              raise SystemExit("max_per_query must be between 1 and 500")
+          if not 1 <= value <= 100:
+              raise SystemExit("max_per_query must be between 1 and 100")
           PY
         env:
           MAX_PER_QUERY: ${{ inputs.max_per_query }}
