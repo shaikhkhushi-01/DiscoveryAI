@@ -92,9 +92,11 @@ async def test_synthesis_removes_fabricated_inline_evidence_markers():
         "title": "A Study", "section": "Results",
         "text": "The study reports a measured result.", "score": 0.8,
     }
-    with patch.object(research_synthesis, "hybrid_search", return_value=[item]), \\
-         patch.object(research_synthesis, "rerank", side_effect=lambda q, items, limit: items), \\
-         patch.object(research_synthesis, "get_llm_provider", return_value=FakeProvider()):
+    with (
+        patch.object(research_synthesis, "hybrid_search", return_value=[item]),
+        patch.object(research_synthesis, "rerank", side_effect=lambda q, items, limit: items),
+        patch.object(research_synthesis, "get_llm_provider", return_value=FakeProvider()),
+    ):
         result = await research_synthesis.synthesize_research(
             "Summarize measured results", mode="literature_review", limit=5
         )
