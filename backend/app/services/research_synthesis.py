@@ -24,7 +24,7 @@ def _clean_ids(value: Any, allowed: set[str]) -> list[str]:
 
 def _sanitize_inline_evidence(text: str, allowed: set[str]) -> str:
     """Remove inline evidence markers that do not map to retrieved source records."""
-    marker = re.compile(r"\\[EVIDENCE\\s+\\d+\\]")
+    marker = re.compile(r"\[EVIDENCE\s+\d+\]")
     return marker.sub(
         lambda match: match.group(0) if match.group(0)[1:-1] in allowed else "",
         text,
