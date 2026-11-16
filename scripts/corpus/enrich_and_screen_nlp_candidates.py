@@ -174,13 +174,15 @@ def main():
         row.setdefault("version_dedup_decision","no_exact_title_author_match_found")
     enriched.sort(key=lambda x:x.get("openalex_id") or "")
     manifest_path=out/"candidate_manifest.jsonl"
-    payload="".join(json.dumps(r,ensure_ascii=False,sort_keys=True)+"\n" for r in enriched).encode()
+    payload="".join(json.dumps(r,ensure_ascii=False,sort_keys=True)+"
+" for r in enriched).encode()
     manifest_path.write_bytes(payload)
     ledger=out/"screening_ledger.csv"
     cols=["openalex_id","doi","title","publication_year","type","language","abstract_status",
           "relevance_triage","manual_relevance_decision","full_text_access_status",
           "candidate_pdf_url","candidate_landing_page_url","license_claims_openalex",
-          "license_rights_status","rights_reviewer_decision","rights_evidence_url",\n          "possible_version_group","version_dedup_decision"]
+          "license_rights_status","rights_reviewer_decision","rights_evidence_url",
+          "possible_version_group","version_dedup_decision"]
     with ledger.open("w",newline="",encoding="utf-8") as f:
         w=csv.DictWriter(f,fieldnames=cols); w.writeheader()
         for r in enriched:
@@ -195,10 +197,13 @@ def main():
       "relevance_triage_counts":dict(__import__("collections").Counter(r["relevance_triage"] for r in enriched)),
       "access_check_counts":dict(__import__("collections").Counter(r["access_check"]["status"] for r in enriched)),
       "license_status_counts":dict(__import__("collections").Counter(r["license_rights_status"] for r in enriched)),
-      "manual_relevance_pending":len(enriched),"rights_review_pending":len(enriched),\n      "possible_version_groups":len({r["possible_version_group"] for r in enriched if r.get("possible_version_group")}),\n      "version_dedup_review_pending":sum(bool(r.get("possible_version_group")) for r in enriched),
+      "manual_relevance_pending":len(enriched),"rights_review_pending":len(enriched),
+      "possible_version_groups":len({r["possible_version_group"] for r in enriched if r.get("possible_version_group")}),
+      "version_dedup_review_pending":sum(bool(r.get("possible_version_group")) for r in enriched),
       "manifest_sha256":sha256(payload),"screening_ledger_sha256":sha256(ledger.read_bytes()),
       "freeze_status":"PROVISIONAL_DISCOVERY_SNAPSHOT_ONLY_NOT_AN_ELIGIBLE_CORPUS",
-      "limitations":["Keyword/topic relevance is triage only, not a validated classifier or human screening.",\n       "Possible preprint/published-version matches are flagged for review and never automatically collapsed.",
+      "limitations":["Keyword/topic relevance is triage only, not a validated classifier or human screening.",
+       "Possible preprint/published-version matches are flagged for review and never automatically collapsed.",
        "URL reachability does not verify full-text completeness or lawful access.",
        "OpenAlex license labels are metadata claims and are not independently verified legal permissions.",
        "Every candidate requires human relevance and rights review before final corpus eligibility."]
@@ -206,7 +211,9 @@ def main():
     (out/"api_errors.json").write_text(json.dumps(errors,indent=2),encoding="utf-8")
     (out/"snapshot_report.json").write_text(json.dumps(summary,indent=2),encoding="utf-8")
     (out/"SHA256SUMS.txt").write_text(
-      f'{summary["manifest_sha256"]}  candidate_manifest.jsonl\n{summary["screening_ledger_sha256"]}  screening_ledger.csv\n',encoding="utf-8")
+      f'{summary["manifest_sha256"]}  candidate_manifest.jsonl
+{summary["screening_ledger_sha256"]}  screening_ledger.csv
+',encoding="utf-8")
     print(json.dumps(summary,indent=2))
     # Retrieval failures are reported but don't hide partial auditable output.
     return 0
