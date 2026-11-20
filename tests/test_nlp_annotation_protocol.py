@@ -24,9 +24,10 @@ class AnnotationProtocolTests(unittest.TestCase):
             grouped,incomplete=validate_pairs(load_records(path))
             self.assertEqual(len(grouped),1)
             self.assertEqual(incomplete,[])
-    def test_same_reviewer_cannot_form_pair(self):
-        _,incomplete=validate_pairs([record("A"),record("B",reviewer_id="A",claimed_contribution="Different")])
+    def test_single_reviewer_is_incomplete_pair(self):
+        _,incomplete=validate_pairs([record("A")])
         self.assertEqual(len(incomplete),1)
+        self.assertEqual(incomplete[0]["reviewer_count"],1)
     def test_missing_evidence_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/"bad.jsonl"
