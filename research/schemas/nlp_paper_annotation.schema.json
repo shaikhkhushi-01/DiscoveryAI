@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DiscoveryAI NLP Paper Annotation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "paper_id",
+    "version_id",
+    "reviewer_id",
+    "annotated_at_utc",
+    "nlp_relevance",
+    "primary_category",
+    "contribution_type",
+    "research_question",
+    "claimed_contribution",
+    "evidence_locators",
+    "reproducibility",
+    "confidence"
+  ],
+  "properties": {
+    "paper_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "annotated_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nlp_relevance": {
+      "enum": [
+        "IN_SCOPE",
+        "OUT_OF_SCOPE",
+        "UNCERTAIN"
+      ]
+    },
+    "primary_category": {
+      "enum": [
+        "MODEL_METHOD",
+        "DATA_RESOURCE",
+        "EVALUATION",
+        "ROBUSTNESS_SAFETY",
+        "RETRIEVAL_QA_RAG",
+        "LINGUISTIC_ANALYSIS",
+        "REPRODUCIBILITY",
+        "OTHER_NLP",
+        "OUT_OF_SCOPE"
+      ]
+    },
+    "secondary_categories": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "MODEL_METHOD",
+          "DATA_RESOURCE",
+          "EVALUATION",
+          "ROBUSTNESS_SAFETY",
+          "RETRIEVAL_QA_RAG",
+          "LINGUISTIC_ANALYSIS",
+          "REPRODUCIBILITY",
+          "OTHER_NLP"
+        ]
+      }
+    },
+    "contribution_type": {
+      "enum": [
+        "METHOD",
+        "DATA",
+        "EVALUATION",
+        "ANALYSIS",
+        "REPLICATION",
+        "POSITION",
+        "OTHER"
+      ]
+    },
+    "research_question": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claimed_contribution": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_locators": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "task_domain": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model_system": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data_resource": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evaluation_setup": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "baseline_comparator": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "outcomes_metrics": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "limitations": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reproducibility": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "CODE_AVAILABLE",
+          "DATA_AVAILABLE",
+          "DETAILS_SUFFICIENT",
+          "NOT_REPORTED",
+          "NOT_APPLICABLE"
+        ]
+      }
+    },
+    "confidence": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
+    "rationale_uncertainty": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}
