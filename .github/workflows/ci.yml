@@ -29,8 +29,8 @@ jobs:
           DEBUG: "true"
           DATABASE_URL: sqlite:///./ci.db
           NEO4J_PASSWORD: ci-test-password
-          PYTHONPATH: .
-        run: pytest app/tests tests -q
+          PYTHONPATH: ..:.
+        run: pytest app/tests tests ../tests -q
 
   frontend:
     runs-on: ubuntu-latest
