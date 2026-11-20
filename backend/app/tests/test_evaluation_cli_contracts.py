@@ -40,7 +40,7 @@ def test_baseline_comparison_rejects_non_object_prediction_row(tmp_path):
     payload = json.loads(paths["llm_only"].read_text(encoding="utf-8"))
     payload["predictions"][0] = "not-an-object"
     paths["llm_only"].write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(ValueError, match=r"predictions\\[0\\] must be an object"):
+    with pytest.raises(ValueError, match=r"predictions\[0\] must be an object"):
         compare_baselines(benchmark, paths)
 
 
