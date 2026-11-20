@@ -25,8 +25,13 @@ LOWER_IS_BETTER = ("rating_mae",)
 
 
 def _read_prediction(path: str | Path) -> dict[str, Any]:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or not isinstance(payload.get("predictions"), list):
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path}: prediction file is not valid JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path}: prediction file root must be an object")
+    if not isinstance(payload.get("predictions"), list):
         raise ValueError(f"{path}: prediction file must contain a predictions array")
     return payload
 
@@ -51,13 +56,23 @@ def compare_baselines(
     reference_signature: tuple[Any, ...] | None = None
     for system in BASELINE_SYSTEMS:
         payload = _read_prediction(prediction_files[system])
-        metadata = payload.get("run_metadata") or {}
+        metadata = payload.get("run_metadata")
+        if not isinstance(metadata, dict):
+            raise ValueError(f"{system}: run_metadata must be an object")
         if metadata.get("system_id") != system:
             raise ValueError(f"{system}: run_metadata.system_id must equal {system!r}")
-        for prediction in payload["predictions"]:
+
+        # Validate structure before inspecting evidence counts. This keeps malformed
+        # JSON artifacts on the documented ValueError path instead of leaking
+        # AttributeError/TypeError from the comparison wrapper.
+        for index, prediction in enumerate(payload["predictions"]):
+            if not isinstance(prediction, dict):
+                raise ValueError(f"{system}: predictions[{index}] must be an object")
             evidence = prediction.get("evidence")
             if not isinstance(evidence, list):
-                raise ValueError(f"{system}: every prediction must contain an evidence array")
+                raise ValueError(
+                    f"{system}: predictions[{index}].evidence must be an array"
+                )
             if len(evidence) > evidence_budget:
                 raise ValueError(
                     f"{system}: record {prediction.get('record_id')!r} uses {len(evidence)} evidence items; "
