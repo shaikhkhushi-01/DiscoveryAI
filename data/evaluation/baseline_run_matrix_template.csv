@@ -1,0 +1,6 @@
+system_id,benchmark_id,benchmark_version,corpus_snapshot_id,split,record_ids_sha256,code_revision,model_provider,model_name,model_version,prompt_version,embedding_model,retrieval_config,evidence_budget,seed,started_at_utc,completed_at_utc,status,prediction_artifact,artifact_sha256,notes
+llm_only,,,,,,,,,,,,,8,,,,NOT_RUN,,,
+vector_rag,,,,,,,,,,,,,8,,,,NOT_RUN,,,
+graph_rag,,,,,,,,,,,,,8,,,,NOT_RUN,,,
+hybrid_retrieval,,,,,,,,,,,,,8,,,,NOT_RUN,,,
+discoveryai_full,,,,,,,,,,,,,8,,,,NOT_RUN,,,
