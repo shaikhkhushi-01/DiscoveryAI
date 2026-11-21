@@ -23,3 +23,31 @@ class RightsPipelineTests(unittest.TestCase):
             p.write_text("{bad json}\n",encoding="utf-8")
             with self.assertRaises(ValueError): read_jsonl(p)
 if __name__=="__main__": unittest.main()
+
+
+    def test_rights_queue_cli_writes_pending_csv(self):
+        import csv
+        import json
+        import subprocess
+        import sys
+
+        repository_root = Path(__file__).resolve().parents[1]
+        script = repository_root / "scripts" / "corpus" / "build_fulltext_rights_queue.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "candidate_manifest.jsonl"
+            output = Path(tmp) / "rights_queue.csv"
+            source.write_text(
+                json.dumps({"openalex_id": "W1", "title": "NLP paper"}) + "\\n"
+                + json.dumps({"openalex_id": "W2", "title": "Another paper"}) + "\\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [sys.executable, str(script), "--input", str(source), "--out", str(output)],
+                cwd=repository_root, capture_output=True, text=True, check=False, timeout=15,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with output.open(newline="", encoding="utf-8-sig") as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual(len(rows), 2)
+            self.assertTrue(all(row["rights_status"] == "PENDING_HUMAN_REVIEW" for row in rows))
+            self.assertTrue(all(row["approved_for_text_mining"] == "false" for row in rows))
