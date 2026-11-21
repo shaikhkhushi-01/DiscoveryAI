@@ -46,7 +46,10 @@ jobs:
       - name: Enrich abstracts, triage relevance, check URLs, and build screening ledger
         run: |
           python scripts/corpus/enrich_and_screen_nlp_candidates.py --input data/raw/openalex_discovery/candidate_pool.jsonl --out data/processed/nlp_corpus_snapshot
-      - name: Upload auditable provisional corpus snapshot
+      - name: Build per-paper full-text and rights review queue
+        run: |
+          python scripts/corpus/build_fulltext_rights_queue.py --input data/processed/nlp_corpus_snapshot/candidate_manifest.jsonl --out data/processed/nlp_corpus_snapshot/fulltext_rights_review_queue.csv
+      - name: Upload auditable provisional corpus snapshot and review queue
         uses: actions/upload-artifact@v4
         with:
           name: nlp-corpus-provisional-${{ inputs.source_run_id }}
