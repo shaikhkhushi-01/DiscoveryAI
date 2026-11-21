@@ -119,7 +119,7 @@ async def generate_prediction(system_id: str, record: dict[str, Any], *, evidenc
 
     prompt = f"""Research question: {query}
 
-Available corpus evidence (only evidence allowed):
+Available corpus evidence (retrieval systems: exclusive source; llm_only: empty by design, use pretrained knowledge cautiously):
 {json.dumps(evidence_items, ensure_ascii=False)}
 
 Return exactly:
