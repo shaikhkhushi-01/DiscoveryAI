@@ -190,7 +190,7 @@ async def generate_system_predictions(benchmark_path: str | Path, output_dir: st
     benchmark = json.loads(Path(benchmark_path).read_text(encoding="utf-8"))
     if not isinstance(benchmark, dict) or not isinstance(benchmark.get("records"), list):
         raise ValueError("benchmark JSON must contain records array")
-    selected = [r for r in benchmark["records"] if isinstance(r, dict) and r.get("split") == split and r.get("annotation_state") == "adjudicated"]
+    selected = [r for r in benchmark["records"] if isinstance(r, dict) and r.get("split") == split and (r.get("annotations") or {}).get("adjudication_status") == "adjudicated"]
     if not selected:
         raise ValueError(f"no adjudicated records in split {split!r}; no predictions generated")
     target = Path(output_dir)
