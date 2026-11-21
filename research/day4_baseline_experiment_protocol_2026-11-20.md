@@ -1,6 +1,6 @@
 # Day 4 — Baseline systems and experiment infrastructure
 
-**Date:** 2026-11-20  
+**Date:** 2026-11-21  
 **Status:** protocol and execution controls; no benchmark run or result is claimed.  
 **Scope:** NLP and language-model research only.
 
@@ -103,8 +103,9 @@ If human annotation remains deferred, the system can be exercised in **engineeri
 - [x] Five-system comparison interface and baseline identifiers inspected in the repository.
 - [x] Required run metadata and fairness controls documented.
 - [x] Benchmark and corpus hard gates documented.
-- [ ] Run-artifact validation executed against genuine system outputs.
-- [ ] Five comparable prediction artifacts produced on an eligible benchmark.
-- [ ] Scored baseline comparison executed on a locked, adjudicated split.
+- [x] Static runner-integration audit completed; evaluator validation contract inspected. See `research/day4_runner_integration_audit_2026-11-21.md`.
+- [ ] Run-artifact validation executed against genuine system outputs (blocked: no eligible benchmark/predictions).
+- [ ] Five comparable prediction artifacts produced on an eligible benchmark (blocked: Day 2 and human adjudication gates).
+- [ ] Scored baseline comparison executed on a locked, adjudicated split (blocked: Day 2 and human adjudication gates).
 
 Day 4 is therefore **in progress**. Protocol readiness is not experiment completion.
