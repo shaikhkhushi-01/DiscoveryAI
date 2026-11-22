@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
         "run_discovery_gap_bench.py",
         "compare_discovery_gap_baselines.py",
         "run_discovery_gap_ablations.py",
+        "generate_discovery_gap_ablations.py",
         "package_evaluation_run.py",
     ],
 )
