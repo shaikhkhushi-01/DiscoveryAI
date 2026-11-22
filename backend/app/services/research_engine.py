@@ -226,10 +226,26 @@ Rules:
             candidate["title"], candidate["rationale"], limit=min(8, len(selected_hits)),
             retrieved_hits=selected_hits,
         )
+        critic_evidence_ids = []
+        original_by_provenance = {
+            (str(item.get("paper_id")), str(item.get("document_id")), str(item.get("chunk_id"))): item["evidence_id"]
+            for item in sources
+        }
+        for critic_source in critique.get("sources", []) if isinstance(critique.get("sources"), list) else []:
+            if not isinstance(critic_source, dict):
+                continue
+            key = (
+                str(critic_source.get("paper_id")),
+                str(critic_source.get("document_id")),
+                str(critic_source.get("chunk_id")),
+            )
+            mapped = original_by_provenance.get(key)
+            if mapped and mapped not in critic_evidence_ids:
+                critic_evidence_ids.append(mapped)
         candidate["critic"] = {
             "verdict": critique.get("verdict", "review"),
             "rationale": critique.get("rationale", "Critic did not return a rationale."),
-            "evidence_ids": critique.get("evidence_ids", []),
+            "evidence_ids": critic_evidence_ids,
             "distinct_paper_count": critique.get("distinct_paper_count", 0),
         }
         candidate["status"] = (
