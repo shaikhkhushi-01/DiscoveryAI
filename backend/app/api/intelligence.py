@@ -7,6 +7,7 @@ from app.auth.dependencies import get_current_user
 from app.models.user import User
 from app.services.hypothesis_intelligence import generate_opportunity_plan
 from app.services.research_synthesis import synthesize_research
+from app.services.research_engine import analyze_research_query
 
 router = APIRouter(prefix="/api/v1/intelligence", tags=["research-intelligence"])
 
@@ -16,11 +17,24 @@ class PlanRequest(BaseModel):
     limit: int = Field(default=5, ge=1, le=10)
 
 
+class ResearchQueryRequest(BaseModel):
+    query: str = Field(min_length=5, max_length=2000)
+    limit: int = Field(default=12, ge=4, le=30)
+    max_candidates: int = Field(default=3, ge=1, le=3)
+
+
 class SynthesisRequest(BaseModel):
     query: str = Field(min_length=5, max_length=2000)
     mode: Literal["comparison", "literature_review"] = "literature_review"
     limit: int = Field(default=12, ge=2, le=30)
     paper_ids: list[int] | None = Field(default=None, max_length=20)
+
+
+@router.post("/discover")
+async def discover_research(payload: ResearchQueryRequest, current_user: User = Depends(get_current_user)):
+    return await analyze_research_query(
+        payload.query, limit=payload.limit, max_candidates=payload.max_candidates
+    )
 
 
 @router.post("/hypotheses")
