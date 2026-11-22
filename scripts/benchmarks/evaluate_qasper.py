@@ -102,7 +102,7 @@ def load_predictions(path: Path) -> dict[str, dict[str, Any]]:
                 )
             if any(not isinstance(item, str) for item in evidence):
                 raise ValueError(f"Prediction line {line_number}: every evidence item must be a string")
-                    if qid in predictions:
+            if qid in predictions:
                 raise ValueError(f"Duplicate prediction question_id at line {line_number}: {qid}")
             predictions[qid] = {"answer": answer, "evidence": evidence}
     return predictions
