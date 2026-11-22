@@ -141,7 +141,7 @@ async def generate_ablation_prediction(
         # not replaced with guessed trend data.
         auxiliary["temporal_signals"] = topic_timeline(query, limit=20)
     if config.discovery_score:
-        paper_ids = sorted({int(x["paper_id"]) for x in evidence_items})
+        paper_ids = sorted({x["paper_id"] for x in evidence_items})
         score_input = {
             "retrieval_evidence_count": len(evidence_items),
             "supporting_signal": sum(
