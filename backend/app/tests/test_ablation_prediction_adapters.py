@@ -104,6 +104,7 @@ class AblationPredictionAdapterTests(unittest.IsolatedAsyncioTestCase):
     async def test_empty_text_is_not_counted_as_evidence(self):
         empty_hit = {**_hit(), "text": "   ", "excerpt": ""}
         with patch.object(adapters, "_retrieve", return_value=[empty_hit]), \
+             patch.object(adapters, "topic_timeline", return_value=[]), \
              patch.object(adapters, "get_llm_provider", return_value=_FakeProvider({
                  "gap_status": "supported",
                  "ratings": {
