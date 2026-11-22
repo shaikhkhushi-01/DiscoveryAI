@@ -9,7 +9,7 @@
 
 ## Version and immutable source inputs
 
-The preparation script uses the official v0.3.0 archive URLs and checksums published in the official dataset metadata at revision `5366057ba2c400b05c8347de3ad722b2ba22351b`:
+The preparation script uses the official v0.3.0 archive URLs and checksums published in the official dataset metadata at revision `fdc9d8214fbab5dd782958601db4d678e6934a54`:
 - Train + development archive: `qasper-train-dev-v0.3.tgz`; SHA-256 `a28fdf966db827bcee3d873107d6b6669864fb7ca8fbf73a192f5e39191bdb5a`.
 - Test + evaluator archive: `qasper-test-and-evaluator-v0.3.tgz`; SHA-256 `72a52a41193e2838b8074f80ac074b94f956b84886c36a61c58a7df4171bdd72`.
 
