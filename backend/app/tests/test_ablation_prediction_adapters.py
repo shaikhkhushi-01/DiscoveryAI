@@ -53,6 +53,9 @@ class AblationPredictionAdapterTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(adapters, "graph_search", return_value=[_hit()]), \
              patch.object(adapters, "graph_expand", return_value=[]), \
              patch.object(adapters, "hybrid_search") as hybrid, \
+             patch.object(adapters, "critique_research_gap", new_callable=AsyncMock, return_value={"verdict": "review"}), \
+             patch.object(adapters, "topic_timeline", return_value=[]), \
+             patch.object(adapters, "compute_discovery_score", return_value={"discovery_score": 70}), \
              patch.object(adapters, "get_llm_provider", return_value=_FakeProvider(_response())):
             result = await adapters.generate_ablation_prediction(
                 _record(), adapters.AblationConfig.from_id("without_vector_retrieval")
@@ -64,6 +67,9 @@ class AblationPredictionAdapterTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(adapters, "hybrid_search", return_value=[_hit()]), \
              patch.object(adapters, "rerank", return_value=[_hit()]), \
              patch.object(adapters, "retrieve_graph_rag") as graph, \
+             patch.object(adapters, "critique_research_gap", new_callable=AsyncMock, return_value={"verdict": "review"}), \
+             patch.object(adapters, "topic_timeline", return_value=[]), \
+             patch.object(adapters, "compute_discovery_score", return_value={"discovery_score": 70}), \
              patch.object(adapters, "get_llm_provider", return_value=_FakeProvider(_response())):
             result = await adapters.generate_ablation_prediction(
                 _record(), adapters.AblationConfig.from_id("without_graph_retrieval")
