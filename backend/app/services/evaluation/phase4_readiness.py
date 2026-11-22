@@ -56,7 +56,6 @@ def _check_qdrant() -> dict[str, Any]:
             "ready": False,
             "reason": "configured_collection_missing",
         }
-    info = client.get_collection(collection_name=collection_name)
     count = client.count(collection_name=collection_name, exact=True)
     points = int(count.count)
     return {
