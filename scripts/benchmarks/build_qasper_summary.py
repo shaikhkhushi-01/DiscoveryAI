@@ -47,6 +47,8 @@ def build_summary(manifest_path: Path,
     systems: dict[str, Any] = {}
     shared_manifest_hash = sha256_file(manifest_path)
     expected_questions: int | None = None
+    shared_query_hash: str | None = None
+    shared_chunk_hash: str | None = None
     for label, (report_path, metadata_path) in entries.items():
         report = load_json(report_path)
         metadata = load_json(metadata_path)
@@ -59,6 +61,15 @@ def build_summary(manifest_path: Path,
             raise ValueError(f"{label}: generator metadata indicates gold references were loaded")
         if metadata.get("manifest_sha256") != shared_manifest_hash:
             raise ValueError(f"{label}: manifest hash mismatch")
+        query_hash = metadata.get("query_file_sha256")
+        chunk_hash = metadata.get("chunk_file_sha256")
+        for name, value in (("query", query_hash), ("chunk", chunk_hash)):
+            if not isinstance(value, str) or len(value) != 64:
+                raise ValueError(f"{label}: missing or malformed {name} SHA-256")
+        if shared_query_hash is None:
+            shared_query_hash, shared_chunk_hash = query_hash, chunk_hash
+        elif query_hash != shared_query_hash or chunk_hash != shared_chunk_hash:
+            raise ValueError("Systems were not generated from the same query/chunk snapshots")
         if metadata.get("questions_generated") != report.get("predictions_received"):
             raise ValueError(f"{label}: generated prediction count differs from evaluated prediction count")
         if expected_questions is None:
