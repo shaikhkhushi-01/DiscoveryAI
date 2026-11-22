@@ -38,5 +38,7 @@ async def test_structured_repairs_trailing_comma_json():
 
 @pytest.mark.asyncio
 async def test_structured_extracts_object_from_markdown_fence():
-    provider = StubProvider('\`\`\`json\\n{"topics":["RAG"]}\\n\`\`\`')
+    provider = StubProvider("""```json
+{"topics":["RAG"]}
+```""")
     assert await provider.structured("extract") == {"topics": ["RAG"]}
