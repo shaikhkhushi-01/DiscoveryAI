@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from app.services.embeddings.factory import get_embedding_provider
 from app.services.evaluation.prediction_adapters import (
     MAX_EVIDENCE, RATING_FIELDS, SYSTEM_PROMPT, VALID_STATUSES, _evidence_identity,
 )
@@ -21,7 +20,7 @@ from app.services.evidence.scoring import compute_discovery_score
 from app.services.graph_rag.pipeline import retrieve_graph_rag
 from app.services.graph_rag.retrieval import graph_expand, graph_search
 from app.services.llm.factory import get_llm_provider
-from app.services.research_critic import critique_research_gap
+from app.services.gap_detection.research_critic import critique_research_gap
 from app.services.retrieval.hybrid import hybrid_search
 from app.services.retrieval.reranker import rerank
 from app.services.trends.temporal import topic_timeline
