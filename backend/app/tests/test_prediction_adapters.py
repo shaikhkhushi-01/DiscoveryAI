@@ -127,6 +127,23 @@ class PredictionAdapterTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(ValueError, "must be an object"):
                 await adapters.generate_prediction("llm_only", record)
 
+    async def test_empty_retrieval_forces_inconclusive_zero_ratings(self):
+        record = {"record_id": "no-evidence", "research_question": "A research question"}
+        response = {
+            "gap_status": "supported",
+            "ratings": {
+                "novelty_within_corpus": 3, "relevance": 3,
+                "feasibility": 3, "evidence_quality": 3,
+            },
+            "evidence": [],
+        }
+        with patch.dict(adapters.RETRIEVERS, {"vector_rag": AsyncMock(return_value=[])}), \
+             patch.object(adapters, "get_llm_provider", return_value=_FakeProvider(response)):
+            result = await adapters.generate_prediction("vector_rag", record)
+        self.assertEqual(result["gap_status"], "inconclusive")
+        self.assertEqual(result["ratings"], {field: 0 for field in adapters.RATING_FIELDS})
+        self.assertEqual(result["evidence"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
