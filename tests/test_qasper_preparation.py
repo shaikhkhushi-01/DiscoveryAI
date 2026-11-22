@@ -25,22 +25,35 @@ class QasperPreparationTests(unittest.TestCase):
                 "section_name": ["Introduction", "Method"],
                 "paragraphs": [["First paragraph.", "Second paragraph."], ["A method paragraph."]],
             },
-            "qas": {
-                "question": ["What is proposed?", "Can this be answered?"],
-                "question_id": ["q1", "q2"],
-                "answers": [
-                    {"answer": [{
+            "qas": [{
+                "question": "What is proposed?",
+                "question_id": "q1",
+                "answers": [{
+                    "annotation_id": "ann1",
+                    "answer": {
                         "unanswerable": False,
                         "extractive_spans": ["A method."],
                         "yes_no": None,
                         "free_form_answer": "A method is proposed.",
                         "evidence": ["A method paragraph."],
                         "highlighted_evidence": [],
-                    }]},
-                    {"answer": [{"unanswerable": True, "extractive_spans": [], "yes_no": None,
-                                 "free_form_answer": "", "evidence": [], "highlighted_evidence": []}]},
-                ],
-            },
+                    },
+                }],
+            }, {
+                "question": "Can this be answered?",
+                "question_id": "q2",
+                "answers": [{
+                    "annotation_id": "ann2",
+                    "answer": {
+                        "unanswerable": True,
+                        "extractive_spans": [],
+                        "yes_no": None,
+                        "free_form_answer": "",
+                        "evidence": [],
+                        "highlighted_evidence": [],
+                    },
+                }],
+            }],
         }
 
     def test_normalization_keeps_gold_separate_from_query(self):
@@ -53,10 +66,10 @@ class QasperPreparationTests(unittest.TestCase):
         self.assertEqual(references[0]["answers"][0]["evidence"], ["A method paragraph."])
         self.assertTrue(references[0]["labels_available"])
 
-    def test_mismatched_question_arrays_rejected(self):
+    def test_malformed_answer_annotations_rejected(self):
         paper = self.sample_paper()
-        paper["qas"]["question_id"] = ["only-one"]
-        with self.assertRaisesRegex(ValueError, "lengths differ"):
+        paper["qas"][0]["answers"] = "not-a-list"
+        with self.assertRaisesRegex(ValueError, "answers must be a list"):
             normalize_paper("train", "2101.00001", paper)
 
     def test_tar_reader_reads_expected_json_and_rejects_missing_member(self):
