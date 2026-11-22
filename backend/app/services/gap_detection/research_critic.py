@@ -99,12 +99,12 @@ def _canonical_paper_titles(paper_ids: set[int]) -> dict[int, str]:
         db.close()
 
 
-async def critique_research_gap(title: str, description: str = "", limit: int = 8) -> dict[str, Any]:
+async def critique_research_gap(\n    title: str, description: str = "", limit: int = 8,\n    *, retrieved_hits: list[dict[str, Any]] | None = None,\n) -> dict[str, Any]:
     query = " ".join(x for x in (title.strip(), description.strip()) if x)
     # Retrieve a wider candidate pool, then diversify by paper so one paper's
     # many chunks cannot crowd out independent literature.
     retrieval_limit = max(24, min(limit * 4, 48))
-    hits = retrieve_graph_rag(query, limit=retrieval_limit).get("items", [])
+    hits = (retrieved_hits if retrieved_hits is not None\n            else retrieve_graph_rag(query, limit=retrieval_limit).get("items", []))
     ranked = sorted(
         hits,
         key=lambda hit: float(hit.get("graph_rag_score", hit.get("rerank_score", 0)) or 0) - _reference_penalty(hit),
