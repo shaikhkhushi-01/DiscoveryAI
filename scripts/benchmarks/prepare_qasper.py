@@ -20,7 +20,7 @@ from typing import Any
 
 DATASET_VERSION = "0.3.0"
 DATASET_REPO = "allenai/qasper"
-DATASET_REVISION = "5366057ba2c400b05c8347de3ad722b2ba22351b"
+DATASET_REVISION = "fdc9d8214fbab5dd782958601db4d678e6934a54"
 LICENSE = "CC BY 4.0"
 LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/"
 PAPER_URL = "https://aclanthology.org/2021.naacl-main.365/"
