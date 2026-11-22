@@ -113,7 +113,10 @@ async def generate_prediction(system_id: str, record: dict[str, Any], *, evidenc
         if key in seen:
             continue
         seen.add(key)
-        evidence_items.append({**identity, "text": str(item.get("text") or item.get("excerpt") or "")[:1800]})
+        text = str(item.get("text") or item.get("excerpt") or "").strip()
+        if not text:
+            continue
+        evidence_items.append({**identity, "text": text[:1800]})
         if len(evidence_items) >= evidence_budget:
             break
 
@@ -131,6 +134,8 @@ invent citations. Ratings are coarse model estimates and must not be represented
 annotations. Do not output narrative prose.
 """
     result = await get_llm_provider().structured(prompt, system=SYSTEM_PROMPT, temperature=0.0)
+    if not isinstance(result, dict):
+        raise ValueError(f"{system_id}/{record['record_id']}: structured model response must be an object")
     status = result.get("gap_status")
     if status not in VALID_STATUSES:
         raise ValueError(f"{system_id}/{record['record_id']}: invalid gap_status")
@@ -196,13 +201,20 @@ async def generate_system_predictions(benchmark_path: str | Path, output_dir: st
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
     outputs: dict[str, str] = {}
+    staged_payloads: dict[str, dict[str, Any]] = {}
+    selected_benchmark = {**benchmark, "records": selected}
+    # Generate every system before replacing any prior artifact. A failed arm therefore
+    # cannot leave a misleading partial five-system result set in the output directory.
     for system_id in SYSTEMS:
-        metadata = _run_metadata(system_id, benchmark, code_revision=code_revision, model_provider=model_provider, model_name=model_name, prompt_version=prompt_version, embedding_model=embedding_model, retrieval_config=retrieval_config)
+        metadata = _run_metadata(system_id, selected_benchmark, code_revision=code_revision, model_provider=model_provider, model_name=model_name, prompt_version=prompt_version, embedding_model=embedding_model, retrieval_config=retrieval_config)
         predictions = []
         for record in selected:
             predictions.append(await generate_prediction(system_id, record, evidence_budget=evidence_budget))
-        payload = {"run_metadata": metadata, "predictions": predictions}
+        staged_payloads[system_id] = {"run_metadata": metadata, "predictions": predictions}
+    for system_id, payload in staged_payloads.items():
         path = target / f"{system_id}.predictions.json"
-        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temporary.replace(path)
         outputs[system_id] = str(path)
     return outputs
