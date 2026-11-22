@@ -133,7 +133,10 @@ array when there is no traceable evidence. A model-only answer with no retrieval
 invent citations. Ratings are coarse model estimates and must not be represented as expert
 annotations. Do not output narrative prose.
 """
-    result = await get_llm_provider().structured(prompt, system=SYSTEM_PROMPT, temperature=0.0)
+    system_prompt = SYSTEM_PROMPT
+    if system_id == "llm_only":
+        system_prompt = """You are the closed-book baseline for a corpus-grounded research benchmark.\nNo corpus evidence is supplied. Do not claim that a gap is supported or contradicted within a corpus, do not infer that a paper exists, and do not invent citations. Return gap_status=inconclusive, all four ratings as 0, and an empty evidence array. This baseline intentionally has no retrieval access."""
+    result = await get_llm_provider().structured(prompt, system=system_prompt, temperature=0.0)
     if not isinstance(result, dict):
         raise ValueError(f"{system_id}/{record['record_id']}: structured model response must be an object")
     status = result.get("gap_status")
@@ -167,6 +170,12 @@ annotations. Do not output narrative prose.
             continue
         used.add(index)
         output_evidence.append({k: evidence_items[index][k] for k in ("paper_id", "document_id", "chunk_id")} | {"stance": stance})
+    if system_id == "llm_only":
+        # Closed-book cannot establish support/contradiction or novelty within the
+        # indexed corpus. Keep this baseline comparable without fabricating evidence.
+        status = "inconclusive"
+        clean_ratings = {field: 0 for field in RATING_FIELDS}
+        output_evidence = []
     return {"record_id": record["record_id"], "gap_status": status, "ratings": clean_ratings, "evidence": output_evidence}
 
 
