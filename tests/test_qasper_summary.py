@@ -31,8 +31,8 @@ class QasperSummaryTests(unittest.TestCase):
                     "questions_generated": 5, "code_revision": "abc123",
                     "query_file_sha256": "a" * 64, "chunk_file_sha256": "b" * 64,
                     "manifest_sha256": manifest_hash, "gold_references_loaded": False,
-                    "context_inventory": {"total_nonempty_chunks": 5 if name == "abstract_only" else 17,
-                                          "abstract_chunks": 5, "non_abstract_chunks": 0 if name == "abstract_only" else 12,
+                    "context_inventory": {"total_nonempty_chunks": 17,
+                                          "abstract_chunks": 5, "non_abstract_chunks": 12,
                                           "unclassified_chunks": 0,
                                           "selected_scope_chunk_count": 5 if name == "abstract_only" else 17},
                 }), encoding="utf-8")
