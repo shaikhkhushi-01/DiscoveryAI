@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 from unittest.mock import patch
 
@@ -55,5 +56,4 @@ class Phase4ReadinessTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import json
     unittest.main()
