@@ -25,22 +25,35 @@ class QasperPreparationTests(unittest.TestCase):
                 "section_name": ["Introduction", "Method"],
                 "paragraphs": [["First paragraph.", "Second paragraph."], ["A method paragraph."]],
             },
-            "qas": {
-                "question": ["What is proposed?", "Can this be answered?"],
-                "question_id": ["q1", "q2"],
-                "answers": [
-                    {"answer": [{
+            "qas": [{
+                "question": "What is proposed?",
+                "question_id": "q1",
+                "answers": [{
+                    "annotation_id": "ann1",
+                    "answer": {
                         "unanswerable": False,
                         "extractive_spans": ["A method."],
                         "yes_no": None,
                         "free_form_answer": "A method is proposed.",
                         "evidence": ["A method paragraph."],
                         "highlighted_evidence": [],
-                    }]},
-                    {"answer": [{"unanswerable": True, "extractive_spans": [], "yes_no": None,
-                                 "free_form_answer": "", "evidence": [], "highlighted_evidence": []}]},
-                ],
-            },
+                    },
+                }],
+            }, {
+                "question": "Can this be answered?",
+                "question_id": "q2",
+                "answers": [{
+                    "annotation_id": "ann2",
+                    "answer": {
+                        "unanswerable": True,
+                        "extractive_spans": [],
+                        "yes_no": None,
+                        "free_form_answer": "",
+                        "evidence": [],
+                        "highlighted_evidence": [],
+                    },
+                }],
+            }],
         }
 
     def test_normalization_keeps_gold_separate_from_query(self):
