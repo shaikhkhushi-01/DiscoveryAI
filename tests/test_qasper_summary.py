@@ -14,6 +14,8 @@ class QasperSummaryTests(unittest.TestCase):
             root = Path(tmp)
             manifest = root / "manifest.json"
             manifest.write_text(json.dumps({"dataset": "allenai/qasper", "dataset_version": "0.3.0"}), encoding="utf-8")
+            import hashlib
+            manifest_hash = hashlib.sha256(manifest.read_bytes()).hexdigest()
             entries = {}
             for name, answer_f1, evidence_f1 in (("abstract_only", 0.1, 0.2), ("full_text", 0.3, 0.4)):
                 report = root / f"{name}.json"
@@ -28,7 +30,7 @@ class QasperSummaryTests(unittest.TestCase):
                     "split": "validation", "mode": "extractive", "context_scope": name,
                     "questions_generated": 5, "code_revision": "abc123",
                     "query_file_sha256": "a" * 64, "chunk_file_sha256": "b" * 64,
-                    "manifest_sha256": "c" * 64, "gold_references_loaded": False,
+                    "manifest_sha256": manifest_hash, "gold_references_loaded": False,
                 }), encoding="utf-8")
                 entries[name] = (report, metadata)
             summary = build_summary(manifest, entries)
