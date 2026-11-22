@@ -31,8 +31,9 @@ class QasperSummaryTests(unittest.TestCase):
                     "questions_generated": 5, "code_revision": "abc123",
                     "query_file_sha256": "a" * 64, "chunk_file_sha256": "b" * 64,
                     "manifest_sha256": manifest_hash, "gold_references_loaded": False,
-                    "context_inventory": {"abstract_chunks": 5 if name == "abstract_only" else 5,
-                                          "non_abstract_chunks": 0 if name == "abstract_only" else 12,
+                    "context_inventory": {"total_nonempty_chunks": 17,
+                                          "abstract_chunks": 5, "non_abstract_chunks": 12,
+                                          "unclassified_chunks": 0,
                                           "selected_scope_chunk_count": 5 if name == "abstract_only" else 17},
                 }), encoding="utf-8")
                 entries[name] = (report, metadata)
@@ -44,6 +45,8 @@ class QasperSummaryTests(unittest.TestCase):
             self.assertEqual(len(summary["manifest_sha256"]), 64)
             self.assertTrue(summary["context_scope_audit"]["comparison_has_distinct_body_context"])
             self.assertEqual(summary["context_scope_audit"]["inventories"]["full_text"]["non_abstract_chunks"], 12)
+            self.assertTrue(summary["context_scope_audit"]["abstract_only_excludes_body_context"])
+            self.assertTrue(summary["context_scope_audit"]["full_text_includes_all_nonempty_context"])
 
 
 if __name__ == "__main__":
