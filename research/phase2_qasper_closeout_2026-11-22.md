@@ -1,7 +1,7 @@
 # Phase 2 closeout — QASPER benchmark track
 
 **Date:** 2026-11-22  
-**Code revision evaluated:** `b60286214bf1943bcf176442a2150e49794089fc`  
+**Code revision evaluated:** `e687b2f0d52ea03840ba83365731e05f669f9443`  
 **Track status:** Complete for the reproducible QASPER ingestion + validation benchmark pipeline. The separate OpenAlex candidate corpus is explicitly NOT complete.
 
 ## Scope decision
@@ -15,7 +15,7 @@ This does not close the separate 399-record OpenAlex candidate-pool work. That p
 - Dataset: `allenai/qasper`, v0.3.0.
 - Dataset-card license claim: CC BY 4.0; attribution and source-content terms must still be respected.
 - Metadata revision: `fdc9d8214fbab5dd782958601db4d678e6934a54`.
-- Manifest SHA-256: `2f64f7b25759074faa2064c5dc9d8f08799a5707443f7a17931725fdbcedcb9e`.
+- Manifest SHA-256: `c6e3031dd61b7f379441566b0adcbebcb45e1b37847ccd3d0576d638b698a112`.
 - Train/dev archive SHA-256: `a28fdf966db827bcee3d873107d6b6669864fb7ca8fbf73a192f5e39191bdb5a`.
 - Test archive SHA-256: `72a52a41193e2838b8074f80ac074b94f956b84886c36a61c58a7df4171bdd72`.
 
@@ -68,7 +68,7 @@ These are descriptive validation-set results only. No confidence interval, signi
 - [x] Answer-F1 and Evidence-F1 evaluator and aggregate-only report.
 - [x] Abstract-only/full-text context audit and corrected full-text normalization.
 - [x] Validation run inspected; aggregate artifact hashes and counts verified.
-- [x] Strict summary validation for complete prediction coverage, consistent source hashes/revision, reconciled context inventory, and distinct context scopes (added in this closeout PR; CI must pass before merge).
+- [x] Strict summary validation for complete prediction coverage, consistent source hashes/revision, reconciled context inventory, and distinct context scopes (added in this closeout PR; backend, frontend, and repository CI passed on merge commit).
 
 ## Explicitly not complete / next phases
 
