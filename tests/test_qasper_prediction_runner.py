@@ -21,6 +21,15 @@ class QasperPredictionRunnerTests(unittest.TestCase):
         ranked = retrieve_paragraphs("neural retrieval model", chunks, top_k=2)
         self.assertEqual(ranked[0]["chunk_id"], "c1")
 
+
+    def test_abstract_only_scope_excludes_body_paragraphs(self):
+        chunks = [
+            {"chunk_id": "abstract", "section_name": "Abstract", "text": "neural retrieval method"},
+            {"chunk_id": "body", "section_name": "Method", "text": "neural retrieval method"},
+        ]
+        ranked = retrieve_paragraphs("neural retrieval", chunks, top_k=5, context_scope="abstract_only")
+        self.assertEqual([row["chunk_id"] for row in ranked], ["abstract"])
+
     def test_extractive_prediction_cites_selected_paragraphs(self):
         query = {"query_id": "q1", "question": "What retrieval model is proposed?"}
         chunks = [
