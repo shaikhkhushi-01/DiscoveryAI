@@ -50,16 +50,16 @@ def answer_text_and_type(answer: dict[str, Any]) -> tuple[str, str]:
     if answer.get("unanswerable", False):
         return "Unanswerable", "none"
     # Match the official AllenAI QASPER evaluator's precedence exactly:
-    # unanswerable -> boolean -> extractive -> abstractive.
-    yes_no = answer.get("yes_no")
-    if yes_no is not None:
-        return ("Yes" if yes_no else "No"), "boolean"
+    # unanswerable -> extractive -> abstractive -> boolean.
     spans = answer.get("extractive_spans") or []
     if spans:
         return ", ".join(str(item) for item in spans), "extractive"
     free_form = answer.get("free_form_answer") or ""
     if free_form:
         return str(free_form), "abstractive"
+    yes_no = answer.get("yes_no")
+    if yes_no is not None:
+        return ("Yes" if yes_no else "No"), "boolean"
     raise ValueError(f"Gold annotation has no recognized answer: {answer.get('annotation_id')}")
 
 
