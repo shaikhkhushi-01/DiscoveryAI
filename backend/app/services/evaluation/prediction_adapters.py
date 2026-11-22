@@ -170,9 +170,9 @@ annotations. Do not output narrative prose.
             continue
         used.add(index)
         output_evidence.append({k: evidence_items[index][k] for k in ("paper_id", "document_id", "chunk_id")} | {"stance": stance})
-    if system_id == "llm_only":
-        # Closed-book cannot establish support/contradiction or novelty within the
-        # indexed corpus. Keep this baseline comparable without fabricating evidence.
+    if system_id == "llm_only" or not evidence_items:
+        # A closed-book or empty-retrieval run cannot establish support/contradiction
+        # within the indexed corpus. Never let a free-form model verdict replace evidence.
         status = "inconclusive"
         clean_ratings = {field: 0 for field in RATING_FIELDS}
         output_evidence = []
