@@ -29,7 +29,7 @@ def token_f1_score(prediction: str, reference: str) -> float:
     common = Counter(predicted_tokens) & Counter(reference_tokens)
     overlap = sum(common.values())
     if overlap == 0:
-        return 0.0
+        return 1.0 if not predicted_tokens and not reference_tokens else 0.0
     precision = overlap / len(predicted_tokens)
     recall = overlap / len(reference_tokens)
     return 2 * precision * recall / (precision + recall)
@@ -102,7 +102,7 @@ def load_predictions(path: Path) -> dict[str, dict[str, Any]]:
                 )
             if any(not isinstance(item, str) for item in evidence):
                 raise ValueError(f"Prediction line {line_number}: every evidence item must be a string")
-            if qid in predictions:
+                    if qid in predictions:
                 raise ValueError(f"Duplicate prediction question_id at line {line_number}: {qid}")
             predictions[qid] = {"answer": answer, "evidence": evidence}
     return predictions
@@ -139,7 +139,7 @@ def evaluate(gold: dict[str, list[dict[str, Any]]],
     mean = lambda values: sum(values) / len(values) if values else 0.0
     extra_predictions = sorted(set(predicted) - set(gold))
     return {
-        "metric_implementation": "QASPER official evaluator rules (Answer F1 and Evidence F1)",
+        "metric_implementation": "Adapted from allenai/qasper-led-baseline scripts/evaluator.py (pinned source revision afd0fb96bf78ce8cd8157639c6f6a6995e4f9089)",
         "questions_scored": len(gold),
         "predictions_received": len(predicted),
         "missing_predictions": missing,
@@ -157,7 +157,7 @@ def main() -> int:
     parser.add_argument("--predictions", type=Path, required=True,
                         help="JSONL: question_id, predicted_answer, predicted_evidence")
     parser.add_argument("--output", type=Path, default=None, help="Optional JSON report path")
-    parser.add_argument("--text-evidence-only", action="store_true",
+    parser.add_argument("--text-evidence-only", "--text_evidence_only", action="store_true",
                         help="Exclude FLOAT SELECTED figure/table evidence, matching official option")
     args = parser.parse_args()
     try:
