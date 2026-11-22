@@ -81,3 +81,37 @@ def test_research_engine_returns_retrieval_provenance_and_disclaimers():
     assert result["retrieved_source_count"] == 3
     assert len(result["sources"]) == 3
     assert "not proof of global novelty" in result["limitations"][1]
+
+
+
+def test_research_engine_maps_critic_sources_to_original_evidence_ids():
+    from app.services.research_engine import analyze_research_query
+
+    llm_result = {
+        "executive_summary": "Cross-paper summary.",
+        "themes": [],
+        "research_gaps": [{"title": "Candidate", "rationale": "Two-paper rationale.", "evidence_ids": ["EVIDENCE 1", "EVIDENCE 2"]}],
+        "hypotheses": [],
+        "disagreements": [],
+        "limitations": [],
+    }
+    provider = AsyncMock()
+    provider.structured.return_value = llm_result
+    critic = AsyncMock(return_value={
+        "verdict": "accept",
+        "rationale": "Critic found a directly relevant passage.",
+        "distinct_paper_count": 2,
+        "sources": [
+            {"paper_id": 2, "document_id": 22, "chunk_id": 202},
+            {"paper_id": 3, "document_id": 33, "chunk_id": 303},
+        ],
+    })
+    with patch("app.services.research_engine.retrieve_graph_rag", return_value={"items": _hits()}), \
+         patch("app.services.research_engine.get_llm_provider", return_value=provider), \
+         patch("app.services.research_engine.critique_research_gap", critic):
+        result = asyncio.run(analyze_research_query("neural retrieval"))
+
+    candidate = result["research_gaps"][0]
+    assert candidate["critic"]["evidence_ids"] == ["EVIDENCE 2", "EVIDENCE 3"]
+    assert candidate["critic"]["distinct_paper_count"] == 2
+    assert candidate["status"] == "critic_supported_candidate"
