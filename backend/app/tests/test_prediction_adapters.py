@@ -9,8 +9,10 @@ from app.services.evaluation import prediction_adapters as adapters
 class _FakeProvider:
     def __init__(self, result):
         self.result = result
+        self.calls = []
 
     async def structured(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
         return self.result
 
 
@@ -108,15 +110,16 @@ class PredictionAdapterTests(unittest.IsolatedAsyncioTestCase):
             },
             "evidence": [{"evidence_index": 0, "stance": "supporting"}],
         }
+        fake_provider = _FakeProvider(response)
         with patch.dict(adapters.RETRIEVERS, {"vector_rag": AsyncMock(return_value=retrieved)}), \
-             patch.object(adapters, "get_llm_provider", return_value=_FakeProvider(response)) as provider_factory:
+             patch.object(adapters, "get_llm_provider", return_value=fake_provider):
             result = await adapters.generate_prediction("vector_rag", record)
         self.assertEqual(result["evidence"], [{
             "paper_id": "p2", "document_id": "d2", "chunk_id": "c2",
             "stance": "supporting",
         }])
-        provider_factory.return_value.structured.assert_awaited_once()
-        prompt = provider_factory.return_value.structured.await_args.args[0]
+        self.assertEqual(len(fake_provider.calls), 1)
+        prompt = fake_provider.calls[0][0][0]
         self.assertNotIn('"paper_id": "p1"', prompt)
         self.assertIn("Useful excerpt", prompt)
 
