@@ -151,26 +151,32 @@ def normalize_paper(split: str, source_key: str, paper: dict[str, Any]) -> tuple
                 "text_origin": "QASPER v0.3.0 dataset release",
             })
 
-    qas_records = paper.get("qas") or []
-    # Canonical QASPER release stores qas as a list of QA objects, not
-    # parallel question/question_id/answers arrays.
-    if not isinstance(qas_records, list):
-        raise ValueError(f"{paper_id}: qas must be a list of QA objects")
+    qas = paper.get("qas") or {}
+    # Official QASPER v0.3 JSON stores qas as parallel question/question_id
+    # arrays and an answers array grouped by question.
+    if not isinstance(qas, dict):
+        raise ValueError(f"{paper_id}: qas must be an object")
+    questions = qas.get("question") or []
+    question_ids = qas.get("question_id") or []
+    answer_groups = qas.get("answers") or []
+    if not isinstance(questions, list) or not isinstance(question_ids, list) or not isinstance(answer_groups, list):
+        raise ValueError(f"{paper_id}: malformed question arrays")
+    if len(questions) != len(question_ids):
+        raise ValueError(f"{paper_id}: question and question_id lengths differ")
+    if answer_groups and len(answer_groups) != len(questions):
+        raise ValueError(f"{paper_id}: answers and question lengths differ")
 
     queries: list[dict[str, Any]] = []
     references: list[dict[str, Any]] = []
     seen_question_ids: set[str] = set()
-    for index, qa in enumerate(qas_records):
-        if not isinstance(qa, dict):
-            raise ValueError(f"{paper_id}: qas[{index}] must be an object")
-        qid = str(qa.get("question_id") or f"{paper_id}::q::{index}").strip()
-        question_text = str(qa.get("question") or "").strip()
+    for index, question in enumerate(questions):
+        qid = str(_list_at(question_ids, index) or f"{paper_id}::q::{index}").strip()
+        question_text = str(question or "").strip()
         if not qid or not question_text:
-            raise ValueError(f"{paper_id}: qas[{index}] has missing question_id or question")
+            raise ValueError(f"{paper_id}: question {index} has missing ID or text")
         if qid in seen_question_ids:
             raise ValueError(f"{paper_id}: duplicate question_id {qid}")
         seen_question_ids.add(qid)
-
         queries.append({
             "query_id": qid,
             "split": split,
@@ -181,14 +187,19 @@ def normalize_paper(split: str, source_key: str, paper: dict[str, Any]) -> tuple
             "query_text": question_text,
         })
 
-        raw_annotations = qa.get("answers") or []
-        if not isinstance(raw_annotations, list):
-            raise ValueError(f"{paper_id}/{qid}: answers must be a list")
+        group = _list_at(answer_groups, index) or {}
+        if not isinstance(group, dict):
+            raise ValueError(f"{paper_id}/{qid}: answer group must be an object")
+        annotations = group.get("answer") or []
+        annotation_ids = group.get("annotation_id") or []
+        if not isinstance(annotations, list) or not isinstance(annotation_ids, list):
+            raise ValueError(f"{paper_id}/{qid}: answer/annotation_id must be lists")
+        if annotation_ids and len(annotation_ids) != len(annotations):
+            raise ValueError(f"{paper_id}/{qid}: annotation_id and answer lengths differ")
         normalized_answers = []
-        for annotation_index, annotation in enumerate(raw_annotations):
-            if not isinstance(annotation, dict) or not isinstance(annotation.get("answer"), dict):
+        for annotation_index, answer in enumerate(annotations):
+            if not isinstance(answer, dict):
                 raise ValueError(f"{paper_id}/{qid}: answer annotation {annotation_index} is malformed")
-            answer = annotation["answer"]
             extractive = answer.get("extractive_spans") or []
             evidence = answer.get("evidence") or []
             highlighted = answer.get("highlighted_evidence") or []
@@ -201,7 +212,7 @@ def normalize_paper(split: str, source_key: str, paper: dict[str, Any]) -> tuple
                 "free_form_answer": answer.get("free_form_answer") or "",
                 "evidence": evidence,
                 "highlighted_evidence": highlighted,
-                "annotation_id": annotation.get("annotation_id") or answer.get("annotation_id"),
+                "annotation_id": _list_at(annotation_ids, annotation_index),
             })
         references.append({
             "query_id": qid,
