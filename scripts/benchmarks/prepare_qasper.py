@@ -281,7 +281,6 @@ def prepare(output_dir: Path, *, download: bool = True) -> dict[str, Any]:
                 if query_id in split_question_ids:
                     raise ValueError(f"{split}: duplicate question ID across papers: {query_id}")
                 split_question_ids.add(query_id)
-            chunk_rows.extend(chunks)
             query_rows.extend(queries)
             reference_rows.extend(references)
         write_jsonl(normalized_dir / "papers" / f"{split}.jsonl", paper_rows)
