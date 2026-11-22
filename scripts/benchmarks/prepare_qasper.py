@@ -115,10 +115,24 @@ def normalize_paper(split: str, source_key: str, paper: dict[str, Any]) -> tuple
     title = str(paper.get("title") or "").strip()
     abstract = str(paper.get("abstract") or "").strip()
     full_text = paper.get("full_text") or {}
-    if not isinstance(full_text, dict):
-        full_text = {}
-    section_names = full_text.get("section_name") or []
-    paragraphs_by_section = full_text.get("paragraphs") or []
+    # QASPER releases have appeared in two equivalent representations:
+    # (1) the original list of {section_name, paragraphs} objects and
+    # (2) the Hugging Face columnar object with parallel section_name /
+    # paragraphs arrays. Accept both; silently treating a list as {} drops
+    # every body paragraph and makes "full_text" evaluation abstract-only.
+    if isinstance(full_text, list):
+        section_names = []
+        paragraphs_by_section = []
+        for section_index, section in enumerate(full_text):
+            if not isinstance(section, dict):
+                raise ValueError(f"{paper_id}: full_text[{section_index}] must be an object")
+            section_names.append(section.get("section_name"))
+            paragraphs_by_section.append(section.get("paragraphs") or [])
+    elif isinstance(full_text, dict):
+        section_names = full_text.get("section_name") or []
+        paragraphs_by_section = full_text.get("paragraphs") or []
+    else:
+        raise ValueError(f"{paper_id}: full_text must be a list or object")
     if not isinstance(section_names, list) or not isinstance(paragraphs_by_section, list):
         raise ValueError(f"{paper_id}: malformed full_text sections")
     if len(section_names) != len(paragraphs_by_section):
