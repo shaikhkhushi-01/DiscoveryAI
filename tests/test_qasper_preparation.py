@@ -66,10 +66,10 @@ class QasperPreparationTests(unittest.TestCase):
         self.assertEqual(references[0]["answers"][0]["evidence"], ["A method paragraph."])
         self.assertTrue(references[0]["labels_available"])
 
-    def test_mismatched_question_arrays_rejected(self):
+    def test_malformed_answer_annotations_rejected(self):
         paper = self.sample_paper()
-        paper["qas"]["question_id"] = ["only-one"]
-        with self.assertRaisesRegex(ValueError, "lengths differ"):
+        paper["qas"][0]["answers"] = "not-a-list"
+        with self.assertRaisesRegex(ValueError, "answers must be a list"):
             normalize_paper("train", "2101.00001", paper)
 
     def test_tar_reader_reads_expected_json_and_rejects_missing_member(self):
