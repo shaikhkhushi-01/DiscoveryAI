@@ -31,6 +31,9 @@ class QasperSummaryTests(unittest.TestCase):
                     "questions_generated": 5, "code_revision": "abc123",
                     "query_file_sha256": "a" * 64, "chunk_file_sha256": "b" * 64,
                     "manifest_sha256": manifest_hash, "gold_references_loaded": False,
+                    "context_inventory": {"abstract_chunks": 5 if name == "abstract_only" else 5,
+                                          "non_abstract_chunks": 0 if name == "abstract_only" else 12,
+                                          "selected_scope_chunk_count": 5 if name == "abstract_only" else 17},
                 }), encoding="utf-8")
                 entries[name] = (report, metadata)
             summary = build_summary(manifest, entries)
@@ -39,6 +42,8 @@ class QasperSummaryTests(unittest.TestCase):
             self.assertNotIn("predicted_answer", rendered)
             self.assertNotIn("paragraph text", rendered)
             self.assertEqual(len(summary["manifest_sha256"]), 64)
+            self.assertTrue(summary["context_scope_audit"]["comparison_has_distinct_body_context"])
+            self.assertEqual(summary["context_scope_audit"]["inventories"]["full_text"]["non_abstract_chunks"], 12)
 
 
 if __name__ == "__main__":
