@@ -29,7 +29,7 @@ def token_f1_score(prediction: str, reference: str) -> float:
     common = Counter(predicted_tokens) & Counter(reference_tokens)
     overlap = sum(common.values())
     if overlap == 0:
-        return 1.0 if not predicted_tokens and not reference_tokens else 0.0
+        return 0.0
     precision = overlap / len(predicted_tokens)
     recall = overlap / len(reference_tokens)
     return 2 * precision * recall / (precision + recall)
@@ -49,6 +49,8 @@ def paragraph_f1_score(prediction: list[str], reference: list[str]) -> float:
 def answer_text_and_type(answer: dict[str, Any]) -> tuple[str, str]:
     if answer.get("unanswerable", False):
         return "Unanswerable", "none"
+    # Match the official AllenAI QASPER evaluator's precedence exactly:
+    # unanswerable -> extractive -> abstractive -> boolean.
     spans = answer.get("extractive_spans") or []
     if spans:
         return ", ".join(str(item) for item in spans), "extractive"

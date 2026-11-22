@@ -18,7 +18,7 @@ from scripts.benchmarks.evaluate_qasper import (
 class QasperEvaluatorTests(unittest.TestCase):
     def test_squad_normalization_and_token_f1(self):
         self.assertEqual(token_f1_score("The cat, sat!", "cat sat"), 1.0)
-        self.assertEqual(token_f1_score("", ""), 1.0)
+        self.assertEqual(token_f1_score("", ""), 0.0)
         self.assertEqual(token_f1_score("cat", "dog"), 0.0)
 
     def test_paragraph_f1_set_semantics(self):

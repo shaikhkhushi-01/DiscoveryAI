@@ -266,6 +266,7 @@ def prepare(output_dir: Path, *, download: bool = True) -> dict[str, Any]:
         chunk_rows: list[dict[str, Any]] = []
         query_rows: list[dict[str, Any]] = []
         reference_rows: list[dict[str, Any]] = []
+        split_question_ids: set[str] = set()
         for source_key, paper in source.items():
             if not isinstance(paper, dict):
                 raise ValueError(f"{split}/{source_key}: paper record must be an object")
@@ -275,6 +276,11 @@ def prepare(output_dir: Path, *, download: bool = True) -> dict[str, Any]:
             all_paper_ids.add(paper_row["paper_id"])
             paper_rows.append(paper_row)
             chunk_rows.extend(chunks)
+            for query in queries:
+                query_id = str(query["query_id"])
+                if query_id in split_question_ids:
+                    raise ValueError(f"{split}: duplicate question ID across papers: {query_id}")
+                split_question_ids.add(query_id)
             query_rows.extend(queries)
             reference_rows.extend(references)
         write_jsonl(normalized_dir / "papers" / f"{split}.jsonl", paper_rows)
