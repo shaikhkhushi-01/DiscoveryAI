@@ -101,6 +101,58 @@ class AblationPredictionAdapterTests(unittest.IsolatedAsyncioTestCase):
                 await adapters.generate_ablation_prediction(_record(), config)
             (temporal if disabled == "topic_timeline" else score).assert_not_called()
 
+    async def test_empty_text_is_not_counted_as_evidence(self):
+        empty_hit = {**_hit(), "text": "   ", "excerpt": ""}
+        with patch.object(adapters, "_retrieve", return_value=[empty_hit]), \
+             patch.object(adapters, "topic_timeline", return_value=[]), \
+             patch.object(adapters, "get_llm_provider", return_value=_FakeProvider({
+                 "gap_status": "supported",
+                 "ratings": {
+                     "novelty_within_corpus": 3, "relevance": 3,
+                     "feasibility": 3, "evidence_quality": 3,
+                 },
+                 "evidence": [],
+             })):
+            result = await adapters.generate_ablation_prediction(
+                _record(), adapters.AblationConfig.from_id("full")
+            )
+        self.assertEqual(result["gap_status"], "inconclusive")
+        self.assertEqual(set(result["ratings"].values()), {0})
+        self.assertEqual(result["evidence"], [])
+
+    async def test_failed_variant_does_not_write_partial_six_arm_set(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as directory:
+            benchmark = Path(directory) / "benchmark.json"
+            benchmark.write_text(json.dumps({
+                "benchmark_version": "v1",
+                "records": [{
+                    "record_id": "r1", "split": "validation",
+                    "research_question": "Question one?",
+                    "corpus_snapshot": {"corpus_id": "corpus-1"},
+                    "annotations": {"adjudication_status": "adjudicated"},
+                }, {
+                    "record_id": "r2", "split": "validation",
+                    "research_question": "Question two?",
+                    "corpus_snapshot": {"corpus_id": "corpus-1"},
+                    "annotations": {"adjudication_status": "adjudicated"},
+                }],
+            }), encoding="utf-8")
+            output = Path(directory) / "outputs"
+            with patch.object(
+                adapters, "generate_ablation_prediction",
+                new_callable=AsyncMock,
+                side_effect=[{"record_id": "r1"}, RuntimeError("simulated arm failure")],
+            ):
+                with self.assertRaisesRegex(RuntimeError, "simulated arm failure"):
+                    await adapters.generate_ablation_predictions(
+                        benchmark, output, split="validation",
+                        code_revision="abc", model_provider="test", model_name="test",
+                    )
+            self.assertFalse(list(output.glob("*.predictions.json")))
+
     async def test_no_adjudicated_records_fails_closed_before_writing(self):
         import tempfile
         from pathlib import Path
