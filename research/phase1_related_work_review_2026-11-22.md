@@ -19,9 +19,9 @@ Primary source pages reviewed:
 - Dasigi et al. (2021), QASPER, NAACL: https://aclanthology.org/2021.naacl-main.365/
 - QASPER official dataset card: https://huggingface.co/datasets/allenai/qasper
 - Thilakaratne et al. (2019), A systematic review on literature-based discovery workflow: https://doi.org/10.7717/peerj-cs.235
-- Han et al. (2024/2025), Retrieval-Augmented Generation with Graphs: https://arxiv.org/abs/2501.00309
-- Peng et al. (2024), Graph Retrieval-Augmented Generation: A Survey: https://arxiv.org/abs/2408.08921
-- Es et al. (2023; EACL demo 2024), RAGAS: https://arxiv.org/abs/2309.15217
+- Han et al. (2024; revised 2025), Retrieval-Augmented Generation with Graphs: https://arxiv.org/abs/2501.00309
+- Peng et al. (2024; journal version 2025), Graph Retrieval-Augmented Generation: A Survey: https://arxiv.org/abs/2408.08921
+- Es et al. (2024), RAGAs: https://aclanthology.org/2024.eacl-demo.16/
 - Saad-Falcon et al. (2023), ARES: https://arxiv.org/abs/2311.09476
 - Thakur et al. (2021), BEIR: https://github.com/beir-cellar/beir
 
@@ -32,9 +32,9 @@ Primary source pages reviewed:
 | Thilakaratne et al. (2019), LBD systematic review | Reviews literature-based discovery workflows: inputs, filtering/ranking, outputs and evaluation | Survey of LBD approaches and evaluation practices | Establishes that automated literature discovery and hypothesis generation predate current LLM/RAG systems | DiscoveryAI cannot claim invention of literature-based discovery; position its exact workflow and evidence controls narrowly |
 | Dasigi et al. (2021), QASPER | Question answering over research papers; 5,049 questions across 1,585 NLP papers, with answers and supporting evidence | QA and evidence-selection tasks; official card reports F1-based tasks and Longformer baselines | Strong fit for scientific-paper QA and evidence extraction in NLP | Measures paper comprehension/QA, not research-gap novelty or quality |
 | Thakur et al. (2021), BEIR | Heterogeneous zero-shot IR benchmark and common evaluation framework | Multiple datasets and retrieval metrics; each underlying dataset has its own terms | Useful framework for testing retrieval baselines and generalization | BEIR toolkit license does not grant a blanket license to every wrapped dataset; select per-dataset only after rights review |
-| Peng et al. (2024), GraphRAG survey | Organizes graph-based RAG into indexing, retrieval and generation stages | Survey of GraphRAG methods and evaluation | Supports rationale for comparing vector-only, graph, and hybrid paths | Graph use is established; measure when graph context helps rather than assume it always helps |
-| Han et al. (2024/2025), GraphRAG survey | Taxonomy of graph-augmented RAG components and design challenges | Survey of GraphRAG applications and research directions | Provides architecture vocabulary and design context | Not an empirical validation of DiscoveryAI's implementation |
-| Es et al. (2023/2024), RAGAS | Reference-free automated RAG evaluation across context relevance, faithfulness and answer relevance | LLM-based metrics without requiring gold answer labels | Useful inspiration for automated proxy checks in a no-new-annotator student project | Automated judge scores are proxies and can be biased; they do not replace ground truth or expert assessment |
+| Peng et al. (2024; journal version 2025), Graph Retrieval-Augmented Generation: A Survey | Organizes graph-based RAG into graph-based indexing, graph-guided retrieval and graph-enhanced generation | Survey of GraphRAG methods, tasks and evaluation | Supports rationale for comparing vector-only, graph, and hybrid paths | Graph use is established; measure when graph context helps rather than assume it always helps |
+| Han et al. (2024; revised 2025), Retrieval-Augmented Generation with Graphs (GraphRAG) | Survey of graph-enhanced RAG components, query processing, retrieval, organization, generation and data sources | Survey and taxonomy | Provides a broad architecture view of GraphRAG design choices | Not an empirical validation of DiscoveryAI's implementation |
+| Es et al. (2024), RAGAs: Automated Evaluation of Retrieval Augmented Generation | Reference-free evaluation of retrieval relevance, faithfulness and answer quality | LLM-based metrics without requiring gold answer labels for common metrics | Useful inspiration for automated proxy checks in a no-new-annotator student project | Automated judge scores are proxies and can be biased; they do not replace ground truth or expert assessment |
 | Saad-Falcon et al. (2023), ARES | Automated RAG evaluation for context relevance, answer faithfulness and answer relevance | Synthetic training data plus a small human-annotated calibration set | Helps distinguish automated evaluation from human-calibrated evaluation | ARES's published approach still uses some human labels; DiscoveryAI will not claim equivalent calibrated reliability without them |
 
 ## 3. What is and is not novel
