@@ -202,6 +202,15 @@ async def generate(data_dir: Path, output: Path, *, split: str, mode: str, top_k
     for chunk in chunks:
         by_paper.setdefault(str(chunk.get("paper_id") or ""), []).append(chunk)
 
+    # Record what context is actually present; a shared source-file hash alone
+    # cannot prove that abstract-only and full-text modes saw different content.
+    abstract_chunks = [row for row in chunks if str(row.get("section_name", "")).strip().lower() == "abstract"
+                       and isinstance(row.get("text"), str) and row["text"].strip()]
+    body_chunks = [row for row in chunks if str(row.get("section_name", "")).strip().lower() != "abstract"
+                   and isinstance(row.get("text"), str) and row["text"].strip()]
+    papers_with_abstract = {str(row.get("paper_id") or "") for row in abstract_chunks}
+    papers_with_body = {str(row.get("paper_id") or "") for row in body_chunks}
+
     predictions = []
     for query in queries:
         paper_id = str(query.get("paper_id") or "")
@@ -229,6 +238,14 @@ async def generate(data_dir: Path, output: Path, *, split: str, mode: str, top_k
         "context_scope": context_scope,
         "top_k": top_k,
         "questions_generated": len(predictions),
+        "context_inventory": {
+            "total_nonempty_chunks": len(abstract_chunks) + len(body_chunks),
+            "abstract_chunks": len(abstract_chunks),
+            "non_abstract_chunks": len(body_chunks),
+            "papers_with_abstract": len(papers_with_abstract),
+            "papers_with_non_abstract_text": len(papers_with_body),
+            "selected_scope_chunk_count": len(abstract_chunks) if context_scope == "abstract_only" else len(abstract_chunks) + len(body_chunks),
+        },
         "query_file_sha256": file_sha256(query_path),
         "chunk_file_sha256": file_sha256(chunk_path),
         "manifest_sha256": file_sha256(manifest_path),
