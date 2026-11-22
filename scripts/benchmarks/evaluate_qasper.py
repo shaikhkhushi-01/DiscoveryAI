@@ -29,7 +29,7 @@ def token_f1_score(prediction: str, reference: str) -> float:
     common = Counter(predicted_tokens) & Counter(reference_tokens)
     overlap = sum(common.values())
     if overlap == 0:
-        return 1.0 if not predicted_tokens and not reference_tokens else 0.0
+        return 0.0
     precision = overlap / len(predicted_tokens)
     recall = overlap / len(reference_tokens)
     return 2 * precision * recall / (precision + recall)
