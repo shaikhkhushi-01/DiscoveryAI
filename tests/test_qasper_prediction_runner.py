@@ -92,6 +92,8 @@ class QasperPredictionRunnerTests(unittest.TestCase):
             self.assertEqual(report["questions_generated"], 1)
             metadata = json.loads(Path(report["metadata_file"]).read_text(encoding="utf-8"))
             self.assertEqual(len(metadata["query_file_sha256"]), 64)
+            self.assertEqual(metadata["context_inventory"]["non_abstract_chunks"], 0)
+            self.assertEqual(metadata["context_inventory"]["selected_scope_chunk_count"], 1)
 
 
 if __name__ == "__main__":

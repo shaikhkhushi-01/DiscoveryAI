@@ -45,6 +45,7 @@ def build_summary(manifest_path: Path,
     if manifest.get("dataset") != "allenai/qasper" or manifest.get("dataset_version") != "0.3.0":
         raise ValueError("Expected pinned allenai/qasper v0.3.0 manifest")
     systems: dict[str, Any] = {}
+    context_inventories: dict[str, Any] = {}
     shared_manifest_hash = sha256_file(manifest_path)
     expected_questions: int | None = None
     shared_query_hash: str | None = None
@@ -72,6 +73,13 @@ def build_summary(manifest_path: Path,
             raise ValueError("Systems were not generated from the same query/chunk snapshots")
         if metadata.get("questions_generated") != report.get("predictions_received"):
             raise ValueError(f"{label}: generated prediction count differs from evaluated prediction count")
+        inventory = metadata.get("context_inventory")
+        if not isinstance(inventory, dict):
+            raise ValueError(f"{label}: missing context_inventory; rerun the benchmark with the audited generator")
+        for count_name in ("abstract_chunks", "non_abstract_chunks", "selected_scope_chunk_count"):
+            if not isinstance(inventory.get(count_name), int) or inventory[count_name] < 0:
+                raise ValueError(f"{label}: malformed context_inventory.{count_name}")
+        context_inventories[label] = inventory
         if expected_questions is None:
             expected_questions = report["questions_scored"]
         elif report["questions_scored"] != expected_questions:
@@ -103,6 +111,12 @@ def build_summary(manifest_path: Path,
         "manifest_sha256": shared_manifest_hash,
         "questions_scored_per_system": expected_questions,
         "systems": systems,
+        "context_scope_audit": {
+            "inventories": context_inventories,
+            "comparison_has_distinct_body_context": context_inventories.get("full_text", {}).get("non_abstract_chunks", 0) > 0,
+            "warning": None if context_inventories.get("full_text", {}).get("non_abstract_chunks", 0) > 0
+                       else "No non-abstract chunks exist in the normalized validation corpus; full_text and abstract_only are not a valid context comparison.",
+        },
         "paired_differences": {
             "comparison": f"{labels[1]} minus {labels[0]}",
             "answer_f1": second["answer_f1"] - first["answer_f1"],
