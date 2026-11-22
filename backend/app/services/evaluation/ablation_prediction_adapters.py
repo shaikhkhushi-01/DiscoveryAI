@@ -121,10 +121,11 @@ async def generate_ablation_prediction(
         key = (identity["paper_id"], identity["document_id"], identity["chunk_id"])
         if key in seen:
             continue
+        text = str(item.get("text") or item.get("excerpt") or "").strip()
+        if not text:
+            continue
         seen.add(key)
-        evidence_items.append({
-            **identity, "text": str(item.get("text") or item.get("excerpt") or "")[:1800],
-        })
+        evidence_items.append({**identity, "text": text[:1800]})
         if len(evidence_items) >= evidence_budget:
             break
 
@@ -249,6 +250,7 @@ async def generate_ablation_predictions(
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
     outputs: dict[str, str] = {}
+    staged_payloads: dict[str, dict[str, Any]] = {}
     for ablation_id in ABLATION_CONFIGS:
         config = AblationConfig.from_id(ablation_id)
         predictions = [
@@ -269,8 +271,26 @@ async def generate_ablation_predictions(
             "enabled_components": [name for name in COMPONENT_NAMES if getattr(config, name)],
             "evidence_budget": evidence_budget,
         }
-        path = target / f"{ablation_id}.predictions.json"
-        path.write_text(json.dumps({"run_metadata": metadata, "predictions": predictions},
-                                   indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        outputs[ablation_id] = str(path)
+        staged_payloads[ablation_id] = {"run_metadata": metadata, "predictions": predictions}
+
+    # Do not publish a partial six-arm result set if any variant fails. Stage every
+    # artifact first, then atomically replace the corresponding files.
+    staged_paths: dict[str, Path] = {}
+    try:
+        for ablation_id, payload in staged_payloads.items():
+            path = target / f"{ablation_id}.predictions.json"
+            temporary = path.with_suffix(path.suffix + ".tmp")
+            temporary.write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            staged_paths[ablation_id] = temporary
+        for ablation_id, temporary in staged_paths.items():
+            path = target / f"{ablation_id}.predictions.json"
+            temporary.replace(path)
+            outputs[ablation_id] = str(path)
+    finally:
+        for temporary in staged_paths.values():
+            if temporary.exists():
+                temporary.unlink()
     return outputs
