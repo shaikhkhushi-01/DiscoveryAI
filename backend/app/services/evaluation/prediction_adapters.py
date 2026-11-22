@@ -113,7 +113,10 @@ async def generate_prediction(system_id: str, record: dict[str, Any], *, evidenc
         if key in seen:
             continue
         seen.add(key)
-        evidence_items.append({**identity, "text": str(item.get("text") or item.get("excerpt") or "")[:1800]})
+        text = str(item.get("text") or item.get("excerpt") or "").strip()
+        if not text:
+            continue
+        evidence_items.append({**identity, "text": text[:1800]})
         if len(evidence_items) >= evidence_budget:
             break
 
@@ -130,7 +133,12 @@ array when there is no traceable evidence. A model-only answer with no retrieval
 invent citations. Ratings are coarse model estimates and must not be represented as expert
 annotations. Do not output narrative prose.
 """
-    result = await get_llm_provider().structured(prompt, system=SYSTEM_PROMPT, temperature=0.0)
+    system_prompt = SYSTEM_PROMPT
+    if system_id == "llm_only":
+        system_prompt = """You are the closed-book baseline for a corpus-grounded research benchmark.\nNo corpus evidence is supplied. Do not claim that a gap is supported or contradicted within a corpus, do not infer that a paper exists, and do not invent citations. Return gap_status=inconclusive, all four ratings as 0, and an empty evidence array. This baseline intentionally has no retrieval access."""
+    result = await get_llm_provider().structured(prompt, system=system_prompt, temperature=0.0)
+    if not isinstance(result, dict):
+        raise ValueError(f"{system_id}/{record['record_id']}: structured model response must be an object")
     status = result.get("gap_status")
     if status not in VALID_STATUSES:
         raise ValueError(f"{system_id}/{record['record_id']}: invalid gap_status")
@@ -162,6 +170,12 @@ annotations. Do not output narrative prose.
             continue
         used.add(index)
         output_evidence.append({k: evidence_items[index][k] for k in ("paper_id", "document_id", "chunk_id")} | {"stance": stance})
+    if system_id == "llm_only" or not evidence_items:
+        # A closed-book or empty-retrieval run cannot establish support/contradiction
+        # within the indexed corpus. Never let a free-form model verdict replace evidence.
+        status = "inconclusive"
+        clean_ratings = {field: 0 for field in RATING_FIELDS}
+        output_evidence = []
     return {"record_id": record["record_id"], "gap_status": status, "ratings": clean_ratings, "evidence": output_evidence}
 
 
@@ -196,13 +210,20 @@ async def generate_system_predictions(benchmark_path: str | Path, output_dir: st
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
     outputs: dict[str, str] = {}
+    staged_payloads: dict[str, dict[str, Any]] = {}
+    selected_benchmark = {**benchmark, "records": selected}
+    # Generate every system before replacing any prior artifact. A failed arm therefore
+    # cannot leave a misleading partial five-system result set in the output directory.
     for system_id in SYSTEMS:
-        metadata = _run_metadata(system_id, benchmark, code_revision=code_revision, model_provider=model_provider, model_name=model_name, prompt_version=prompt_version, embedding_model=embedding_model, retrieval_config=retrieval_config)
+        metadata = _run_metadata(system_id, selected_benchmark, code_revision=code_revision, model_provider=model_provider, model_name=model_name, prompt_version=prompt_version, embedding_model=embedding_model, retrieval_config=retrieval_config)
         predictions = []
         for record in selected:
             predictions.append(await generate_prediction(system_id, record, evidence_budget=evidence_budget))
-        payload = {"run_metadata": metadata, "predictions": predictions}
+        staged_payloads[system_id] = {"run_metadata": metadata, "predictions": predictions}
+    for system_id, payload in staged_payloads.items():
         path = target / f"{system_id}.predictions.json"
-        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temporary.replace(path)
         outputs[system_id] = str(path)
     return outputs
