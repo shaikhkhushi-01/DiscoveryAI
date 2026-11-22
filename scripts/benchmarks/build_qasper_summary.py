@@ -73,12 +73,26 @@ def build_summary(manifest_path: Path,
             raise ValueError("Systems were not generated from the same query/chunk snapshots")
         if metadata.get("questions_generated") != report.get("predictions_received"):
             raise ValueError(f"{label}: generated prediction count differs from evaluated prediction count")
+        if report["missing_predictions"] != 0 or report["predictions_received"] != report["questions_scored"]:
+            raise ValueError(f"{label}: validation summary requires complete, one-to-one prediction coverage")
         inventory = metadata.get("context_inventory")
         if not isinstance(inventory, dict):
             raise ValueError(f"{label}: missing context_inventory; rerun the benchmark with the audited generator")
-        for count_name in ("abstract_chunks", "non_abstract_chunks", "selected_scope_chunk_count"):
+        for count_name in ("total_nonempty_chunks", "abstract_chunks", "non_abstract_chunks",
+                           "unclassified_chunks", "selected_scope_chunk_count"):
             if not isinstance(inventory.get(count_name), int) or inventory[count_name] < 0:
                 raise ValueError(f"{label}: malformed context_inventory.{count_name}")
+        if inventory["total_nonempty_chunks"] != (
+            inventory["abstract_chunks"] + inventory["non_abstract_chunks"] + inventory["unclassified_chunks"]
+        ):
+            raise ValueError(f"{label}: context inventory counts do not reconcile")
+        scope = metadata.get("context_scope")
+        if scope == "abstract_only" and inventory["selected_scope_chunk_count"] != inventory["abstract_chunks"]:
+            raise ValueError(f"{label}: abstract_only selected chunks must equal abstract chunk count")
+        if scope == "full_text" and inventory["selected_scope_chunk_count"] != inventory["total_nonempty_chunks"]:
+            raise ValueError(f"{label}: full_text selected chunks must equal all nonempty chunks")
+        if scope not in ("abstract_only", "full_text"):
+            raise ValueError(f"{label}: unsupported context_scope {scope!r}")
         context_inventories[label] = inventory
         if expected_questions is None:
             expected_questions = report["questions_scored"]
@@ -103,6 +117,19 @@ def build_summary(manifest_path: Path,
         raise ValueError("At least two comparable systems are required")
     labels = list(systems)
     first, second = systems[labels[0]], systems[labels[1]]
+    if {row["code_revision"] for row in systems.values()}.__len__() != 1:
+        raise ValueError("Systems were generated from different code revisions")
+    if {"total_nonempty_chunks", "abstract_chunks", "non_abstract_chunks", "unclassified_chunks"} - set(context_inventories[labels[0]]) or any(
+        any(context_inventories[labels[0]][key] != context_inventories[label][key]
+            for key in ("total_nonempty_chunks", "abstract_chunks", "non_abstract_chunks", "unclassified_chunks"))
+        for label in labels[1:]
+    ):
+        raise ValueError("Systems have inconsistent source-corpus context inventories")
+    if "abstract_only" in context_inventories and "full_text" in context_inventories:
+        if context_inventories["full_text"]["non_abstract_chunks"] <= 0:
+            raise ValueError("full_text comparison requires non-abstract body chunks")
+        if context_inventories["abstract_only"]["selected_scope_chunk_count"] >= context_inventories["full_text"]["selected_scope_chunk_count"]:
+            raise ValueError("abstract_only and full_text did not select distinct context sizes")
     return {
         "report_type": "aggregate_only_qasper_validation",
         "dataset": manifest["dataset"],
@@ -114,8 +141,15 @@ def build_summary(manifest_path: Path,
         "context_scope_audit": {
             "inventories": context_inventories,
             "comparison_has_distinct_body_context": context_inventories.get("full_text", {}).get("non_abstract_chunks", 0) > 0,
-            "warning": None if context_inventories.get("full_text", {}).get("non_abstract_chunks", 0) > 0
-                       else "No non-abstract chunks exist in the normalized validation corpus; full_text and abstract_only are not a valid context comparison.",
+            "abstract_only_excludes_body_context": (
+                context_inventories.get("abstract_only", {}).get("selected_scope_chunk_count", 0)
+                == context_inventories.get("abstract_only", {}).get("abstract_chunks", -1)
+            ),
+            "full_text_includes_all_nonempty_context": (
+                context_inventories.get("full_text", {}).get("selected_scope_chunk_count", 0)
+                == context_inventories.get("full_text", {}).get("total_nonempty_chunks", -1)
+            ),
+            "warning": None,
         },
         "paired_differences": {
             "comparison": f"{labels[1]} minus {labels[0]}",
