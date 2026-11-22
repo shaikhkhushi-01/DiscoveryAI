@@ -65,12 +65,18 @@ def bm25_scores(query: str, documents: list[str], *, k1: float = 1.5, b: float =
     return scores
 
 
-def retrieve_paragraphs(query: str, chunks: list[dict[str, Any]], *, top_k: int = 5) -> list[dict[str, Any]]:
+def retrieve_paragraphs(query: str, chunks: list[dict[str, Any]], *, top_k: int = 5,
+                        context_scope: str = "full_text") -> list[dict[str, Any]]:
     if not 1 <= top_k <= 20:
         raise ValueError("top_k must be between 1 and 20")
+    if context_scope not in {"full_text", "abstract_only"}:
+        raise ValueError("context_scope must be full_text or abstract_only")
     valid = [
         row for row in chunks
-        if isinstance(row, dict) and isinstance(row.get("text"), str) and row["text"].strip()
+        if isinstance(row, dict)
+        and isinstance(row.get("text"), str)
+        and row["text"].strip()
+        and (context_scope == "full_text" or str(row.get("section_name", "")).lower() == "abstract")
     ]
     scores = bm25_scores(query, [row["text"] for row in valid])
     ranked = sorted(
@@ -83,8 +89,12 @@ def retrieve_paragraphs(query: str, chunks: list[dict[str, Any]], *, top_k: int 
     return positive[:top_k]
 
 
-def extractive_prediction(query: dict[str, Any], chunks: list[dict[str, Any]], *, top_k: int = 5) -> dict[str, Any]:
-    ranked = retrieve_paragraphs(str(query.get("question") or query.get("query_text") or ""), chunks, top_k=top_k)
+def extractive_prediction(query: dict[str, Any], chunks: list[dict[str, Any]], *, top_k: int = 5,
+                          context_scope: str = "full_text") -> dict[str, Any]:
+    ranked = retrieve_paragraphs(
+        str(query.get("question") or query.get("query_text") or ""),
+        chunks, top_k=top_k, context_scope=context_scope,
+    )
     if not ranked:
         answer = "Unanswerable"
     else:
@@ -97,11 +107,12 @@ def extractive_prediction(query: dict[str, Any], chunks: list[dict[str, Any]], *
     }
 
 
-async def llm_prediction(query: dict[str, Any], chunks: list[dict[str, Any]], *, top_k: int = 5) -> dict[str, Any]:
+async def llm_prediction(query: dict[str, Any], chunks: list[dict[str, Any]], *, top_k: int = 5,
+                         context_scope: str = "full_text") -> dict[str, Any]:
     from app.services.llm.factory import get_llm_provider
 
     question = str(query.get("question") or query.get("query_text") or "").strip()
-    ranked = retrieve_paragraphs(question, chunks, top_k=top_k)
+    ranked = retrieve_paragraphs(question, chunks, top_k=top_k, context_scope=context_scope)
     if not ranked:
         return {
             "question_id": str(query["query_id"]),
@@ -165,7 +176,8 @@ def file_sha256(path: Path) -> str:
 
 
 async def generate(data_dir: Path, output: Path, *, split: str, mode: str, top_k: int,
-                   max_questions: int | None, code_revision: str) -> dict[str, Any]:
+                   max_questions: int | None, code_revision: str,
+                   context_scope: str = "full_text") -> dict[str, Any]:
     if split == "test":
         raise ValueError("Test split is locked. Generate validation predictions first; no test generation is enabled.")
     normalized = data_dir / "normalized"
@@ -195,9 +207,13 @@ async def generate(data_dir: Path, output: Path, *, split: str, mode: str, top_k
         paper_id = str(query.get("paper_id") or "")
         paper_chunks = by_paper.get(paper_id, [])
         if mode == "extractive":
-            prediction = extractive_prediction(query, paper_chunks, top_k=top_k)
+            prediction = extractive_prediction(
+                query, paper_chunks, top_k=top_k, context_scope=context_scope
+            )
         else:
-            prediction = await llm_prediction(query, paper_chunks, top_k=top_k)
+            prediction = await llm_prediction(
+                query, paper_chunks, top_k=top_k, context_scope=context_scope
+            )
         predictions.append(prediction)
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -210,6 +226,7 @@ async def generate(data_dir: Path, output: Path, *, split: str, mode: str, top_k
         "dataset_version": manifest.get("dataset_version"),
         "split": split,
         "mode": mode,
+        "context_scope": context_scope,
         "top_k": top_k,
         "questions_generated": len(predictions),
         "query_file_sha256": file_sha256(query_path),
@@ -231,6 +248,7 @@ def main() -> int:
     parser.add_argument("--split", choices=("train", "validation"), default="validation")
     parser.add_argument("--mode", choices=("extractive", "llm_rag"), default="extractive")
     parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--context-scope", choices=("full_text", "abstract_only"), default="full_text")
     parser.add_argument("--max-questions", type=int, default=None, help="Optional smoke-test cap")
     parser.add_argument("--code-revision", required=True)
     parser.add_argument("--output", type=Path, default=None)
@@ -240,6 +258,7 @@ def main() -> int:
         report = asyncio.run(generate(
             args.data_dir, output, split=args.split, mode=args.mode, top_k=args.top_k,
             max_questions=args.max_questions, code_revision=args.code_revision,
+            context_scope=args.context_scope,
         ))
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, RuntimeError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
