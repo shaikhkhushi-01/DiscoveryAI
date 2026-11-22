@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.benchmarks.prepare_qasper import normalize_paper
 from scripts.benchmarks.generate_qasper_predictions import (
     extractive_prediction,
     generate,
@@ -13,6 +14,39 @@ from scripts.benchmarks.generate_qasper_predictions import (
 
 
 class QasperPredictionRunnerTests(unittest.TestCase):
+
+    def test_normalize_paper_supports_list_of_section_objects(self):
+        paper = {
+            "id": "p-list",
+            "title": "A paper",
+            "abstract": "Short abstract.",
+            "full_text": [
+                {"section_name": "Introduction", "paragraphs": ["Body paragraph one.", "Body paragraph two."]},
+                {"section_name": "Methods", "paragraphs": ["Method paragraph."]},
+            ],
+            "qas": [],
+        }
+        _, chunks, _, _ = normalize_paper("validation", "p-list", paper)
+        self.assertEqual(len(chunks), 4)
+        self.assertEqual([row["section_name"] for row in chunks],
+                         ["Abstract", "Introduction", "Introduction", "Methods"])
+        self.assertEqual(chunks[1]["text"], "Body paragraph one.")
+
+    def test_normalize_paper_supports_columnar_full_text_object(self):
+        paper = {
+            "id": "p-object",
+            "abstract": "Short abstract.",
+            "full_text": {
+                "section_name": ["Introduction", "Methods"],
+                "paragraphs": [["Body paragraph."], ["Method paragraph."]],
+            },
+            "qas": [],
+        }
+        _, chunks, _, _ = normalize_paper("validation", "p-object", paper)
+        self.assertEqual(len(chunks), 3)
+        self.assertEqual(chunks[1]["section_name"], "Introduction")
+        self.assertEqual(chunks[2]["section_name"], "Methods")
+
     def test_retrieval_prefers_query_relevant_paragraph(self):
         chunks = [
             {"chunk_id": "c1", "text": "We introduce a neural retrieval model for scientific papers."},
