@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import hashlib
 
 from app.services.gap_detection.research_critic import critique_research_gap
 from app.services.graph_rag.pipeline import retrieve_graph_rag
@@ -33,7 +34,11 @@ def _prepare_sources(hits: list[dict[str, Any]], limit: int) -> tuple[list[dict[
         if not text or (paper_id is None and document_id is None):
             continue
         source_key = ("paper", str(paper_id)) if paper_id is not None else ("document", str(document_id))
-        chunk_key = (str(document_id or ""), str(chunk_id or ""))
+        chunk_identity = (
+            str(chunk_id) if chunk_id is not None
+            else hashlib.sha256(text.encode("utf-8")).hexdigest()
+        )
+        chunk_key = (str(document_id or paper_id or ""), chunk_identity)
         if chunk_key in seen_chunks:
             continue
         if per_paper.get(source_key[1], 0) >= 2:
@@ -242,14 +247,16 @@ Rules:
             mapped = original_by_provenance.get(key)
             if mapped and mapped not in critic_evidence_ids:
                 critic_evidence_ids.append(mapped)
+        critic_papers = _distinct_papers(critic_evidence_ids, source_by_id)
         candidate["critic"] = {
             "verdict": critique.get("verdict", "review"),
             "rationale": critique.get("rationale", "Critic did not return a rationale."),
             "evidence_ids": critic_evidence_ids,
-            "distinct_paper_count": critique.get("distinct_paper_count", 0),
+            "distinct_paper_count": len(critic_papers),
         }
         candidate["status"] = (
-            "critic_supported_candidate" if candidate["critic"]["verdict"] == "accept"
+            "critic_supported_candidate"
+            if candidate["critic"]["verdict"] == "accept" and len(critic_papers) >= 2
             else "needs_review"
         )
 
