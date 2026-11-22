@@ -1,0 +1,63 @@
+name: QASPER Validation (zero-cost baselines)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qasper-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prepare pinned QASPER v0.3.0
+        run: python scripts/benchmarks/prepare_qasper.py
+      - name: Generate abstract-only BM25 extractive predictions
+        run: |
+          python scripts/benchmarks/generate_qasper_predictions.py \
+            --split validation --mode extractive --context-scope abstract_only \
+            --code-revision "$GITHUB_SHA" \
+            --output data/benchmarks/qasper/predictions/validation.abstract_only.jsonl
+      - name: Generate full-text BM25 extractive predictions
+        run: |
+          python scripts/benchmarks/generate_qasper_predictions.py \
+            --split validation --mode extractive --context-scope full_text \
+            --code-revision "$GITHUB_SHA" \
+            --output data/benchmarks/qasper/predictions/validation.full_text.jsonl
+      - name: Score abstract-only predictions
+        run: |
+          python scripts/benchmarks/evaluate_qasper.py \
+            --gold data/benchmarks/qasper/normalized/references/validation.jsonl \
+            --predictions data/benchmarks/qasper/predictions/validation.abstract_only.jsonl \
+            --output data/benchmarks/qasper/reports/abstract_only.json
+      - name: Score full-text predictions
+        run: |
+          python scripts/benchmarks/evaluate_qasper.py \
+            --gold data/benchmarks/qasper/normalized/references/validation.jsonl \
+            --predictions data/benchmarks/qasper/predictions/validation.full_text.jsonl \
+            --output data/benchmarks/qasper/reports/full_text.json
+      - name: Build aggregate-only report
+        run: |
+          python scripts/benchmarks/build_qasper_summary.py \
+            --manifest data/benchmarks/qasper/normalized/manifest.json \
+            --abstract-report data/benchmarks/qasper/reports/abstract_only.json \
+            --abstract-metadata data/benchmarks/qasper/predictions/validation.abstract_only.jsonl.metadata.json \
+            --full-text-report data/benchmarks/qasper/reports/full_text.json \
+            --full-text-metadata data/benchmarks/qasper/predictions/validation.full_text.jsonl.metadata.json \
+            --output data/benchmarks/qasper/reports/phase2_validation_summary.json
+      - name: Upload aggregate report and manifest only
+        uses: actions/upload-artifact@v4
+        with:
+          name: qasper-validation-aggregate
+          path: |
+            data/benchmarks/qasper/normalized/manifest.json
+            data/benchmarks/qasper/reports/phase2_validation_summary.json
+          if-no-files-found: error
+          retention-days: 30
