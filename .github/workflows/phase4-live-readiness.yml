@@ -55,11 +55,11 @@ jobs:
           python ../scripts/evaluation/check_phase4_readiness.py --allow-blocked > ../phase4-readiness-report.json
           python -c "import json; p=json.load(open('../phase4-readiness-report.json', encoding='utf-8')); print(json.dumps({'ready': p.get('ready'), 'blocked_checks': p.get('blocked_checks'), 'safety': p.get('safety')}, indent=2))"
       - name: Upload sanitized readiness report
-        if: always() && hashFiles('phase4-readiness-report.json') != ''
+        if: always() && hashFiles('../phase4-readiness-report.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: phase4-readiness-report
-          path: phase4-readiness-report.json
+          path: ../phase4-readiness-report.json
           if-no-files-found: ignore
           retention-days: 7
       - name: Fail when live dependencies are not ready
