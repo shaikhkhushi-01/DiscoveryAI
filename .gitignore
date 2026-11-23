@@ -67,3 +67,4 @@ dist/
 
 # Downloaded benchmark datasets (do not commit raw/full-text/gold data)
 data/benchmarks/
+artifacts/
