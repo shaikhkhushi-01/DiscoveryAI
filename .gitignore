@@ -68,3 +68,8 @@ dist/
 # Downloaded benchmark datasets (do not commit raw/full-text/gold data)
 data/benchmarks/
 artifacts/
+
+# Private rights-review records and acquired full text
+data/private_review/
+data/private_fulltext/
+data/private_fulltext_download_audit.jsonl
