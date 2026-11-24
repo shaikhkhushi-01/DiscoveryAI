@@ -16,6 +16,7 @@ from app.models.indexing_job import IndexingJob
 from app.models.paper import Paper
 from app.models.user import User
 from app.services.document_ingestion import DocumentIngestionError, checksum, process_pdf, store_pdf, validate_pdf
+from app.services.indexing import enqueue_indexing
 from app.services.extraction import EXTRACTION_KEYS, ScientificExtractor, infer_paper_title
 from app.services.llm.factory import get_llm_provider
 from app.services.llm.gemini import GeminiUpstreamError
@@ -192,7 +193,20 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
                 db.add(paper)
                 db.add(document)
         db.refresh(document)
-        return {"id": document.id, "paper_id": paper.id, "checksum": digest, "status": document.status, "page_count": document.page_count}
+        # Upload already performed scientific extraction above. Queue this
+        # persisted full-text document immediately so the scheduled worker can
+        # index it without requiring a second, duplicate /extract request.
+        indexing_job = enqueue_indexing(db, document.id)
+        db.commit()
+        return {
+            "id": document.id,
+            "paper_id": paper.id,
+            "checksum": digest,
+            "status": document.status,
+            "page_count": document.page_count,
+            "indexing_job_id": indexing_job.id,
+            "indexing_status": indexing_job.status,
+        }
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
@@ -243,8 +257,19 @@ async def reprocess_scientific_extraction(
             paper.doi = extraction["doi"]
             paper.abstract = extraction["abstract"]
             paper.publication_date = date(extraction["year"], 1, 1) if extraction["year"] else None
+        # This module's /{document_id}/extract route is registered before the
+        # parallel extraction router. Queue here as well so the active route
+        # cannot silently leave successfully extracted documents unindexed.
+        indexing_job = enqueue_indexing(db, document.id)
+        document.status = "extracted"
         db.commit()
-        return {"document_id": document.id, "paper_id": document.paper_id, "status": "extraction_completed"}
+        return {
+            "document_id": document.id,
+            "paper_id": document.paper_id,
+            "status": "extraction_completed",
+            "indexing_job_id": indexing_job.id,
+            "indexing_status": indexing_job.status,
+        }
     except GeminiUpstreamError as exc:
         db.rollback()
         raise HTTPException(
