@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     gemini_model: str = Field(default="gemini-3.5-flash-lite")
     gemini_fallback_model: str | None = Field(default="gemini-3.6-flash")
     gemini_base_url: str = Field(default="https://generativelanguage.googleapis.com/v1beta")
+    gemini_request_interval_seconds: float = Field(default=5.0, ge=0, le=60)
     embedding_provider: str = Field(default="sentence-transformers")
     embedding_model: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
     gemini_embedding_model: str = Field(default="gemini-embedding-001")
