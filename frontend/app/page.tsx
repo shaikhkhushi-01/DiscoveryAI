@@ -14,6 +14,7 @@ export default function Home() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchStatus, setSearchStatus] = useState("");
+  const [searchAnswer, setSearchAnswer] = useState("");
   const [searching, setSearching] = useState(false);
   const [apiError, setApiError] = useState("");
   // Override with NEXT_PUBLIC_API_URL to point at the deployed backend.
@@ -69,19 +70,28 @@ export default function Home() {
     setSearching(true);
     setSearchStatus("");
     setSearchResults([]);
+    setSearchAnswer("");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 45000);
     try {
-      const data = await apiPost("/api/v1/public/graph-rag/retrieve", { query: query.trim(), limit: 8 });
-      const results = Array.isArray(data.items) ? data.items : [];
+      const response = await fetch(`${apiBase}/api/v1/public/graph-rag/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query.trim(), limit: 8 }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`API request failed (${response.status})`);
+      const data = await response.json();
+      const results = Array.isArray(data.sources) ? data.sources : [];
       setSearchResults(results);
-      setSearchStatus(
-        results.length
-          ? `Retrieved ${results.length} evidence-linked result${results.length === 1 ? "" : "s"}.`
-          : "The API responded, but found no matching evidence in the indexed corpus. Check that this paper is indexed in the shared research corpus."
-      );
+      setSearchAnswer(typeof data.answer === "string" ? data.answer : "The API returned evidence but no answer text.");
+      setSearchStatus(results.length ? `Answer generated from ${results.length} retrieved evidence item${results.length === 1 ? "" : "s"}.` : "No relevant evidence was identified within the indexed corpus and search scope.");
     } catch (error) {
       setSearchResults([]);
-      setSearchStatus(error instanceof Error ? `Search failed: ${error.message}` : "Search failed: the API could not be reached.");
+      setSearchStatus(error instanceof Error && error.name === "AbortError" ? "Search timed out after 45 seconds. The backend retrieval or database service may be unavailable." : error instanceof Error ? `Search failed: ${error.message}` : "Search failed: the API could not be reached.");
     } finally {
+      window.clearTimeout(timeout);
       setSearching(false);
     }
   };
@@ -130,7 +140,7 @@ export default function Home() {
               <span className="label">RESEARCH OPPORTUNITY ENGINE</span>
               <h2>Find what the literature<br /><em>has not answered yet.</em></h2>
               <p>Evidence-grounded analysis across papers, methods, datasets, experiments and research gaps.</p>
-              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Explore"}</button></div>{searchStatus && <p className="muted" role="status" aria-live="polite" style={{ marginTop: 10 }}>{searchStatus}</p>}{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any, index:number) => <div key={r.id ?? `${r.paper_id ?? "result"}-${index}`}><strong>{r.title || r.paper_title || r.node_name || "Evidence result"}</strong><span>{r.year || r.relationship || "Retrieved evidence"}</span></div>)}</div>}
+              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Explore"}</button></div>{searchStatus && <p className="muted" role="status" aria-live="polite" style={{ marginTop: 10 }}>{searchStatus}</p>}{searchAnswer && <div className="panel" style={{ marginTop: 12 }}><span className="label">EVIDENCE-GROUNDED ANSWER</span><p style={{ whiteSpace: "pre-wrap", lineHeight: 1.65 }}>{searchAnswer}</p></div>}{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any, index:number) => <div key={r.id ?? `${r.paper_id ?? "result"}-${index}`}><strong>{r.title || r.paper_title || r.node_name || "Evidence result"}</strong><span>{r.year || r.relationship || "Retrieved evidence"}</span>{r.text && <p>{r.text}</p>}</div>)}</div>}
             </div>
             <div className="hero-orbit"><div className="orbit-ring ring-1" /><div className="orbit-ring ring-2" /><div className="orbit-core">KG<br /><small>REASONING</small></div><span className="node n1">Papers</span><span className="node n2">Methods</span><span className="node n3">Gaps</span><span className="node n4">Evidence</span></div>
           </section>
