@@ -13,6 +13,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchStatus, setSearchStatus] = useState("");
+  const [searching, setSearching] = useState(false);
   const [apiError, setApiError] = useState("");
   // Override with NEXT_PUBLIC_API_URL to point at the deployed backend.
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://discoveryai-6dmk.onrender.com";
@@ -63,14 +65,24 @@ export default function Home() {
   }, []);
 
   const runSearch = async () => {
-    if (!query.trim() || !apiBase) return;
+    if (!query.trim() || searching) return;
+    setSearching(true);
+    setSearchStatus("");
+    setSearchResults([]);
     try {
       const data = await apiPost("/api/v1/public/graph-rag/retrieve", { query: query.trim(), limit: 8 });
-      setSearchResults(data.items || []);
-      setActive("Papers");
-    } catch {
+      const results = Array.isArray(data.items) ? data.items : [];
+      setSearchResults(results);
+      setSearchStatus(
+        results.length
+          ? `Retrieved ${results.length} evidence-linked result${results.length === 1 ? "" : "s"}.`
+          : "The API responded, but found no matching evidence in the indexed corpus. Check that this paper is indexed in the shared research corpus."
+      );
+    } catch (error) {
       setSearchResults([]);
-      setApiError("Search API is unavailable.");
+      setSearchStatus(error instanceof Error ? `Search failed: ${error.message}` : "Search failed: the API could not be reached.");
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -118,7 +130,7 @@ export default function Home() {
               <span className="label">RESEARCH OPPORTUNITY ENGINE</span>
               <h2>Find what the literature<br /><em>has not answered yet.</em></h2>
               <p>Evidence-grounded analysis across papers, methods, datasets, experiments and research gaps.</p>
-              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch}>Explore</button></div>{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any) => <div key={r.id}><strong>{r.title}</strong><span>{r.year || "Year unavailable"}</span></div>)}</div>}
+              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Explore"}</button></div>{searchStatus && <p className="muted" role="status" aria-live="polite" style={{ marginTop: 10 }}>{searchStatus}</p>}{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any, index:number) => <div key={r.id ?? `${r.paper_id ?? "result"}-${index}`}><strong>{r.title || r.paper_title || r.node_name || "Evidence result"}</strong><span>{r.year || r.relationship || "Retrieved evidence"}</span></div>)}</div>}
             </div>
             <div className="hero-orbit"><div className="orbit-ring ring-1" /><div className="orbit-ring ring-2" /><div className="orbit-core">KG<br /><small>REASONING</small></div><span className="node n1">Papers</span><span className="node n2">Methods</span><span className="node n3">Gaps</span><span className="node n4">Evidence</span></div>
           </section>
