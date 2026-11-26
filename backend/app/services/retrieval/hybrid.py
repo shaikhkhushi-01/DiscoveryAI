@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 
@@ -8,6 +9,8 @@ from app.models.document import Document
 from app.models.paper import Paper
 from app.services.embeddings.factory import get_embedding_provider
 from app.services.vector_store import search_vectors
+
+logger = logging.getLogger(__name__)
 
 def _tokens(text: str) -> set[str]:
     return {x for x in re.findall(r"[a-zA-Z0-9][a-zA-Z0-9_-]+", text.lower()) if len(x) > 2}
@@ -27,25 +30,38 @@ def keyword_search(query: str, limit: int = 20, filters: dict[str, Any] | None =
             hay = " ".join([paper.title or "", paper.abstract or ""]).lower()
             overlap = len(tokens & _tokens(hay))
             if overlap:
-                scored.append({"paper_id": paper.id, "title": paper.title, "keyword_score": overlap / len(tokens)})
+                scored.append({"paper_id": paper.id, "title": paper.title, "text": paper.abstract or paper.title or "", "section": "abstract", "document_id": None, "chunk_id": "abstract", "keyword_score": overlap / len(tokens)})
         return sorted(scored, key=lambda x: x["keyword_score"], reverse=True)[:limit]
     finally:
         db.close()
 
 def hybrid_search(query: str, *, limit: int = 10, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     filters = filters or {}
-    vector = get_embedding_provider().embed([query])[0]
-    semantic = search_vectors(vector, limit=min(50, limit * 5), filters=filters)
-    keyword = keyword_search(query, limit=limit * 5, filters=filters)
+    # Keep retrieval available when optional embedding/vector services fail.
+    semantic: list[dict[str, Any]] = []
+    try:
+        vector = get_embedding_provider().embed([query])[0]
+        semantic = search_vectors(vector, limit=min(50, limit * 5), filters=filters)
+    except Exception:
+        logger.exception("Semantic retrieval unavailable; using keyword/abstract fallback")
+    try:
+        keyword = keyword_search(query, limit=limit * 5, filters=filters)
+    except Exception:
+        logger.exception("Keyword retrieval unavailable")
+        keyword = []
     by_key: dict[tuple[Any, Any], dict[str, Any]] = {}
     for item in semantic:
         key = (item.get("document_id"), item.get("chunk_id"))
         by_key[key] = {**item, "semantic_score": float(item.get("score", 0.0))}
     for item in keyword:
-        for key, existing in list(by_key.items()):
-            if existing.get("paper_id") == item["paper_id"]:
-                existing["keyword_score"] = item["keyword_score"]
-                existing["paper_id"] = item["paper_id"]
+        key = (item.get("document_id"), item.get("chunk_id"))
+        existing = by_key.get(key)
+        if existing is None:
+            by_key[key] = {**item, "semantic_score": 0.0}
+        else:
+            existing["keyword_score"] = item["keyword_score"]
+            existing["paper_id"] = item["paper_id"]
+            existing.setdefault("text", item.get("text", ""))
     missing_ids = {int(x["paper_id"]) for x in by_key.values() if x.get("paper_id") is not None and not (x.get("title") or x.get("paper_title"))}
     if missing_ids:
         db = SessionLocal()
