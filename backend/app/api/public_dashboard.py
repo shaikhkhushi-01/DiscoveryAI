@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 from app.services.gap_detection.engine import detect_gaps
+from app.services.graph_rag.answer import answer_graph_rag
 from app.services.graph_rag.pipeline import retrieve_graph_rag
 from app.services.knowledge_graph.neo4j import run
 from app.services.trends.engine import analyze_all
@@ -52,3 +53,9 @@ class GraphRAGRequest(BaseModel):
 def public_graph_rag(payload: GraphRAGRequest):
     filters = {"year": payload.year, "topic": payload.topic, "dataset": payload.dataset}
     return retrieve_graph_rag(payload.query, limit=payload.limit, filters=filters)
+
+@router.post("/graph-rag/ask")
+async def public_graph_rag_ask(payload: GraphRAGRequest):
+    """Return an evidence-grounded natural-language answer for the public dashboard."""
+    filters = {"year": payload.year, "topic": payload.topic, "dataset": payload.dataset}
+    return await answer_graph_rag(payload.query, limit=payload.limit, filters=filters)
