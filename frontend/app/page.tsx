@@ -140,7 +140,7 @@ export default function Home() {
               <span className="label">RESEARCH OPPORTUNITY ENGINE</span>
               <h2>Find what the literature<br /><em>has not answered yet.</em></h2>
               <p>Evidence-grounded analysis across papers, methods, datasets, experiments and research gaps.</p>
-              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Explore"}</button></div>{searchStatus && <p className="muted" role="status" aria-live="polite" style={{ marginTop: 10 }}>{searchStatus}</p>}{searchAnswer && <div className="panel" style={{ marginTop: 12 }}><span className="label">EVIDENCE-GROUNDED ANSWER</span><p style={{ whiteSpace: "pre-wrap", lineHeight: 1.65 }}>{searchAnswer}</p></div>}{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any, index:number) => <div key={r.id ?? `${r.paper_id ?? "result"}-${index}`}><strong>{r.title || r.paper_title || r.node_name || "Evidence result"}</strong><span>{r.year || r.relationship || "Retrieved evidence"}</span>{r.text && <p>{r.text}</p>}</div>)}</div>}
+              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Explore"}</button></div>{searchStatus && <p className="muted" role="status" aria-live="polite" style={{ marginTop: 10 }}>{searchStatus}</p>}{searchAnswer && <div className="panel" style={{ marginTop: 12 }}><span className="label">EVIDENCE-GROUNDED ANSWER</span><AnswerWithCitations answer={searchAnswer} /></div>}{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any, index:number) => <div id={`evidence-${index + 1}`} key={r.id ?? `${r.paper_id ?? "result"}-${index}`} style={{ scrollMarginTop: 24 }}><strong>{r.title || r.paper_title || r.node_name || "Evidence result"}</strong><span>{r.year || r.relationship || "Retrieved evidence"}</span>{r.text && <p>{r.text}</p>}</div>)}</div>}
             </div>
             <div className="hero-orbit"><div className="orbit-ring ring-1" /><div className="orbit-ring ring-2" /><div className="orbit-core">KG<br /><small>REASONING</small></div><span className="node n1">Papers</span><span className="node n2">Methods</span><span className="node n3">Gaps</span><span className="node n4">Evidence</span></div>
           </section>
@@ -182,6 +182,37 @@ export default function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+function AnswerWithCitations({ answer }: { answer: string }) {
+  let text = answer;
+  try {
+    const parsed = JSON.parse(answer);
+    if (parsed && typeof parsed.answer === "string") text = parsed.answer;
+  } catch {
+    // The API may return plain text rather than a JSON-encoded answer.
+  }
+
+  const parts = text.split(/(\\[VECTOR EVIDENCE\\s+\\d+\\])/g);
+  return (
+    <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, marginTop: 12 }}>
+      {parts.map((part, index) => {
+        const match = part.match(/^\\[VECTOR EVIDENCE\\s+(\\d+)\\]$/);
+        if (!match) return <span key={index}>{part}</span>;
+        const evidenceNumber = Number(match[1]);
+        return (
+          <a
+            key={index}
+            href={`#evidence-${evidenceNumber}`}
+            style={{ display: "inline-block", margin: "0 2px", color: "#5ee7c4", textDecoration: "underline", textUnderlineOffset: 3, fontWeight: 600 }}
+            title={`Jump to retrieved evidence ${evidenceNumber}`}
+          >
+            [Evidence {evidenceNumber}]
+          </a>
+        );
+      })}
+    </p>
   );
 }
 
