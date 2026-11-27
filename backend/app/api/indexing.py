@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.models.document import Document
 from app.models.indexing_job import IndexingJob
 from app.models.user import User
-from app.services.indexing import enqueue_indexing, get_indexing_job
+from app.services.indexing import enqueue_embedding_reindex, enqueue_indexing, get_indexing_job
 from app.services.vector_store import check_qdrant_connection
 
 router = APIRouter(prefix="/api/v1/documents", tags=["indexing"])
@@ -55,6 +55,26 @@ def queue_indexing(
 
     # The dedicated worker polls PostgreSQL and claims queued jobs.
     # Never run ML indexing inside the web request process.
+    return _job_response(job)
+
+
+
+@router.post("/{document_id}/reindex-embeddings", status_code=status.HTTP_202_ACCEPTED)
+def queue_embedding_reindex(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Rebuild this document's Qdrant vectors using the active embedding provider."""
+    document = db.get(Document, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    try:
+        job = enqueue_embedding_reindex(db, document_id)
+        db.commit()
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _job_response(job)
 
 
