@@ -57,6 +57,35 @@ def enqueue_indexing(db: Session, document_id: int) -> IndexingJob:
     return job
 
 
+def enqueue_embedding_reindex(db: Session, document_id: int) -> IndexingJob:
+    """Queue a full vector rebuild with the currently configured embedding provider."""
+    job = db.scalar(
+        select(IndexingJob)
+        .where(IndexingJob.document_id == document_id)
+        .with_for_update()
+    )
+    now = datetime.now(timezone.utc)
+    if job is not None and job.status == "running" and _is_job_fresh(job, now):
+        raise ValueError("An indexing job is already running for this document")
+
+    if job is None:
+        job = IndexingJob(document_id=document_id)
+        db.add(job)
+
+    # Unlike a normal retry, an embedding migration must deliberately rebuild
+    # vectors even when the previous provider completed successfully.
+    job.status = "queued"
+    job.attempts = 0
+    job.vector_status = "pending"
+    job.graph_status = "pending"
+    job.last_error = None
+    job.queued_at = now
+    job.started_at = None
+    job.completed_at = None
+    db.flush()
+    return job
+
+
 def _is_job_fresh(job: IndexingJob, now: datetime | None = None) -> bool:
     now = now or datetime.now(timezone.utc)
     updated_at = job.updated_at
