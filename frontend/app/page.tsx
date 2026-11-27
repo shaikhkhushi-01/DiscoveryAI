@@ -194,16 +194,16 @@ function AnswerWithCitations({ answer }: { answer: string }) {
     // The API may return plain text rather than a JSON-encoded answer.
   }
 
-  const parts = text.split(/\\[(VECTOR EVIDENCE\\s+\\d+(?:\\s*,\\s*VECTOR EVIDENCE\\s+\\d+)*)\\]/g);
+  const parts = text.split(/\[(VECTOR EVIDENCE\s+\d+(?:\s*,\s*VECTOR EVIDENCE\s+\d+)*)\]/g);
   return (
     <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, marginTop: 12 }}>
       {parts.map((part, index) => {
         if (index % 2 === 0) return <span key={index}>{part}</span>;
-        const citations = part.split(/,\\s*/);
+        const citations = part.split(/,\s*/);
         return (
           <span key={index}>
             {citations.map((citation, citationIndex) => {
-              const match = citation.match(/^VECTOR EVIDENCE\\s+(\\d+)$/);
+              const match = citation.match(/^VECTOR EVIDENCE\s+(\d+)$/);
               if (!match) return <span key={citationIndex}>{citation}</span>;
               const evidenceNumber = Number(match[1]);
               return (
