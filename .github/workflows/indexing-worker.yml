@@ -41,11 +41,12 @@ jobs:
       NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
       NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
       NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE || 'neo4j' }}
-      EMBEDDING_PROVIDER: sentence-transformers
-      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      # Must match the Render API: Qdrant vectors from different embedding
+      # providers are not interchangeable, even when dimensions are equal.
+      EMBEDDING_PROVIDER: gemini
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_EMBEDDING_MODEL: gemini-embedding-001
       EMBEDDING_DIMENSION: "384"
-      HF_HOME: ${{ github.workspace }}/.cache/huggingface
-      HF_HUB_DISABLE_TELEMETRY: "1"
       TOKENIZERS_PARALLELISM: "false"
       OMP_NUM_THREADS: "2"
       MKL_NUM_THREADS: "2"
@@ -85,6 +86,7 @@ jobs:
               "NEO4J_URI",
               "NEO4J_USERNAME",
               "NEO4J_PASSWORD",
+              "GEMINI_API_KEY",
           )
           missing = [name for name in required if not os.getenv(name, "").strip()]
           if missing:
@@ -121,6 +123,10 @@ jobs:
               sys.exit(1)
           if not addresses:
               print("Supabase pooler did not return an IPv4 address; worker cannot connect.")
+              sys.exit(1)
+
+          if os.getenv("EMBEDDING_PROVIDER") != "gemini":
+              print("Worker embedding provider must be gemini to match the Render API.")
               sys.exit(1)
 
           print("Required secrets are present and Supabase pooler resolves to IPv4; values are not displayed.")
