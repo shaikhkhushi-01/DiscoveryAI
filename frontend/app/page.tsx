@@ -65,6 +65,18 @@ export default function Home() {
     return () => { cancelled = true; };
   }, []);
 
+  const groupedSearchResults = (() => {
+    const groups = new Map<string, { title: string; year: string; items: { item: any; index: number }[] }>();
+    searchResults.forEach((item: any, index: number) => {
+      const title = item.title || item.paper_title || item.node_name || "Evidence result";
+      const key = String(item.paper_id ?? item.document_id ?? title);
+      const group = groups.get(key) ?? { title, year: item.year || "", items: [] };
+      group.items.push({ item, index });
+      groups.set(key, group);
+    });
+    return Array.from(groups.values());
+  })();
+
   const runSearch = async () => {
     if (!query.trim() || searching) return;
     setSearching(true);
@@ -140,7 +152,7 @@ export default function Home() {
               <span className="label">RESEARCH OPPORTUNITY ENGINE</span>
               <h2>Find what the literature<br /><em>has not answered yet.</em></h2>
               <p>Evidence-grounded analysis across papers, methods, datasets, experiments and research gaps.</p>
-              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Explore"}</button></div>{searchStatus && <p className="muted" role="status" aria-live="polite" style={{ marginTop: 10 }}>{searchStatus}</p>}{searchAnswer && <div className="panel" style={{ marginTop: 12 }}><span className="label">EVIDENCE-GROUNDED ANSWER</span><AnswerWithCitations answer={searchAnswer} /></div>}{searchResults.length > 0 && <div className="search-results">{searchResults.map((r:any, index:number) => <div id={`evidence-${index + 1}`} key={r.id ?? `${r.paper_id ?? "result"}-${index}`} style={{ scrollMarginTop: 24 }}><strong>{r.title || r.paper_title || r.node_name || "Evidence result"}</strong><span>{r.year || r.relationship || "Retrieved evidence"}</span>{r.text && <p>{r.text}</p>}</div>)}</div>}
+              <div className="search-box"><span>⌕</span><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch()} placeholder="Search indexed papers… e.g. scientific RAG" /><button onClick={runSearch} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Explore"}</button></div>{searchStatus && <p className="muted" role="status" aria-live="polite" style={{ marginTop: 10 }}>{searchStatus}</p>}{searchAnswer && <div className="panel" style={{ marginTop: 12 }}><span className="label">EVIDENCE-GROUNDED ANSWER</span><AnswerWithCitations answer={searchAnswer} /></div>}{searchResults.length > 0 && <div className="search-results">{groupedSearchResults.map((group, groupIndex) => <section key={`${group.title}-${groupIndex}`} style={{ border: "1px solid rgba(148,163,184,.2)", borderRadius: 12, padding: 16, marginTop: 12 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}><strong>{group.title}</strong><span>{group.items.length} evidence passage{group.items.length === 1 ? "" : "s"}{group.year ? ` · ${group.year}` : ""}</span></div>{group.items.map(({ item, index }) => <div id={`evidence-${index + 1}`} key={item.id ?? `${item.paper_id ?? "result"}-${index}`} style={{ scrollMarginTop: 24, borderTop: "1px solid rgba(148,163,184,.14)", marginTop: 12, paddingTop: 12 }}><span style={{ fontSize: 12, opacity: .75 }}>Evidence {index + 1}{item.section ? ` · ${item.section}` : item.relationship ? ` · ${item.relationship}` : ""}</span>{item.text && <p style={{ marginTop: 6 }}>{item.text}</p>}</div>)}</section>)}</div>}
             </div>
             <div className="hero-orbit"><div className="orbit-ring ring-1" /><div className="orbit-ring ring-2" /><div className="orbit-core">KG<br /><small>REASONING</small></div><span className="node n1">Papers</span><span className="node n2">Methods</span><span className="node n3">Gaps</span><span className="node n4">Evidence</span></div>
           </section>
