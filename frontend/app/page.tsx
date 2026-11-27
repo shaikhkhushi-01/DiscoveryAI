@@ -66,7 +66,8 @@ export default function Home() {
   }, []);
 
   const groupedSearchResults = (() => {
-    const groups = new Map<string, { title: string; year: string; items: { item: any; index: number }[] }>();
+    type EvidenceGroup = { title: string; year: string; items: { item: any; index: number }[] };
+    const groups = new Map<string, EvidenceGroup>();
     searchResults.forEach((item: any, index: number) => {
       const title = item.title || item.paper_title || item.node_name || "Evidence result";
       const key = String(item.paper_id ?? item.document_id ?? title);
