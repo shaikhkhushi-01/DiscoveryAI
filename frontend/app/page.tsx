@@ -71,7 +71,7 @@ export default function Home() {
     searchResults.forEach((item: any, index: number) => {
       const title = item.title || item.paper_title || item.node_name || "Evidence result";
       const key = String(item.paper_id ?? item.document_id ?? title);
-      const group = groups.get(key) ?? { title, year: item.year || "", items: [] };
+      const group: EvidenceGroup = groups.get(key) ?? { title, year: item.year || "", items: [] };
       group.items.push({ item, index });
       groups.set(key, group);
     });
