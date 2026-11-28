@@ -50,7 +50,7 @@ jobs:
         run: |
           python scripts/corpus/build_fulltext_rights_queue.py --input data/processed/nlp_corpus_snapshot/candidate_manifest.jsonl --out data/processed/nlp_corpus_snapshot/fulltext_rights_review_queue.csv
       - name: Upload auditable provisional corpus snapshot and review queue
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nlp-corpus-provisional-${{ inputs.source_run_id }}
           path: data/processed/nlp_corpus_snapshot/

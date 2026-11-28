@@ -53,7 +53,7 @@ jobs:
             --full-text-metadata data/benchmarks/qasper/predictions/validation.full_text.jsonl.metadata.json \
             --output data/benchmarks/qasper/reports/phase2_validation_summary.json
       - name: Upload aggregate report and manifest only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: qasper-validation-aggregate
           path: |
