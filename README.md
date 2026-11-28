@@ -28,6 +28,12 @@ DiscoveryAI is a research-oriented platform that ingests scientific papers, extr
 
 The public demo's indexed corpus may be small and can change as documents are added or re-indexed. A successful demo query is a functional demonstration, not evidence of broad scientific coverage.
 
+## Verified live demo journey
+
+On 2026-11-28, the deployed Explore flow was manually checked with a BERT masked-language-modeling question. The API returned an answer grounded in eight retrieved evidence passages; citation links opened the corresponding evidence passages and scrolled to the correct locations in the page.
+
+This verifies that specific question-answering and evidence-navigation journey against the currently indexed corpus. It is not a benchmark score, a broad-coverage claim, or validation of research-gap novelty.
+
 ## What the system does
 
 1. **Document intelligence** — PDF validation, parsing, metadata normalization, scientific extraction, and indexing.
@@ -70,7 +76,7 @@ DiscoveryGapBench -> predictions -> evaluator -> baselines/ablations
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14, React 18, TypeScript |
+| Frontend | Next.js 15, React 19, TypeScript |
 | API | Python 3.12, FastAPI, Pydantic |
 | Relational data | PostgreSQL, SQLAlchemy, Alembic |
 | Vector search | Qdrant |
@@ -155,6 +161,7 @@ The Compose file starts PostgreSQL, Neo4j, Qdrant, Redis, the API, and the front
 - `GET /health` and `GET /api/v1/health` — process/API health.
 - `GET /api/v1/public/overview`, `/gaps`, and `/trends` — public dashboard data.
 - `POST /api/v1/public/graph-rag/retrieve` — public read-only retrieval surface.
+- `POST /api/v1/public/graph-rag/ask` — public evidence-grounded question answering with retrieved source passages and graph context.
 - `POST /api/v1/documents/upload` — authenticated PDF ingestion.
 - `POST /api/v1/documents/{id}/index` — authenticated indexing.
 - `GET /api/v1/diagnostics/qdrant-health` — authenticated Qdrant diagnostic.
