@@ -4,6 +4,19 @@
 **Audience:** project evaluators, research supervisors, technical reviewers  
 **Rule:** use a real uploaded paper and real API responses. If a dependency is unavailable or the corpus is empty, show the honest empty/error state rather than fabricated counts.
 
+## Verified public Explore walkthrough (2–3 minutes)
+
+This short path is verified against the deployed application and does not require an authenticated upload session.
+
+1. Open the live dashboard's **Explore** area.
+2. Submit: “What is the masked language modeling objective used in BERT, and how does it help the model learn bidirectional representations?”
+3. Explain that the answer is generated from the currently indexed corpus and cites retrieved passages from *BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding*.
+4. Point out the eight retrieved evidence passages and the distinction between the generated synthesis and source text.
+5. Click Evidence 1 and show that the page navigates to the corresponding passage.
+6. State the boundary: this demonstrates one functioning evidence-grounded Q&A journey, not general scientific coverage or validated research-gap discovery.
+
+The question and observed result are recorded in `docs/submission/EVALUATION_STATUS.md`. If the live service is temporarily unavailable, do not claim the walkthrough succeeded during that session; use a clearly labelled recording or explain the outage.
+
 ## Before the demo
 
 - Confirm frontend and backend are reachable.
