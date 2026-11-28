@@ -21,6 +21,10 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - name: Install backend dependencies
         run: pip install -r requirements.txt pytest pytest-asyncio
+      - name: Audit backend dependencies
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
       - name: Compile Python sources
         run: python -m compileall app
       - name: Run backend unit and regression tests
