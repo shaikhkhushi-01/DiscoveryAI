@@ -42,7 +42,7 @@ jobs:
           cache: pip
 
       - name: Install minimal LLM runtime
-        run: python -m pip install --upgrade pip pydantic-settings==2.7.1 httpx==0.28.1
+        run: python -m pip install --upgrade pip pydantic-settings==2.7.1 httpx==0.28.1 openai==1.68.2
 
       - name: Verify Gemini secret is configured
         run: |
