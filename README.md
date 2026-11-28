@@ -8,7 +8,7 @@ DiscoveryAI is a research prototype for exploring scientific literature beyond k
 [![Frontend](https://img.shields.io/badge/live%20demo-open-14b8a6)](https://discovery-ai-swart.vercel.app/)
 [![API](https://img.shields.io/badge/API-Swagger-2563eb)](https://discoveryai-6dmk.onrender.com/docs)
 [![Python](https://img.shields.io/badge/Python-3.12-3776ab)](https://www.python.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.4-black)](https://nextjs.org/)
 
 | Resource | Link |
 |---|---|
@@ -60,7 +60,7 @@ The public corpus is intentionally small and may change as papers are added or r
 
 ```mermaid
 flowchart TD
-    R[Researcher] --> UI[Next.js 15 / React 19]
+    R[Researcher] --> UI[Next.js 16.4 / React 19.3]
     UI --> API[FastAPI]
     API --> ING[PDF ingestion and scientific extraction]
     ING --> PG[(PostgreSQL)]
@@ -95,7 +95,7 @@ flowchart TD
 
 | Layer | Stack |
 |---|---|
-| Frontend | Next.js 15, React 19, TypeScript |
+| Frontend | Next.js 16.4, React 19.3, TypeScript |
 | Backend | Python 3.12, FastAPI, Pydantic |
 | Relational database | PostgreSQL, SQLAlchemy, Alembic |
 | Vector database | Qdrant |
