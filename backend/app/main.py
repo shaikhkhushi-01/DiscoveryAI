@@ -89,7 +89,7 @@ def health_check():
 app = CORSMiddleware(
     app=app,
     allow_origins=[x.strip() for x in settings.cors_origins.split(",") if x.strip()],
-    allow_origin_regex=r"https://([a-z0-9-]+\\.)*vercel\\.app",
+    allow_origin_regex=r"https://([a-z0-9-]+\.)*vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
