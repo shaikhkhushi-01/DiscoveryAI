@@ -44,6 +44,8 @@ jobs:
           node-version: "20"
       - name: Install frontend dependencies
         run: npm install
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=moderate
       - name: Check frontend types
         run: npm run typecheck
       - name: Build frontend
