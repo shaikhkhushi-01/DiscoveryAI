@@ -199,33 +199,67 @@ export default function Home() {
 }
 
 function AnswerWithCitations({ answer }: { answer: string }) {
-  let text = answer;
+  let parsed: any = null;
   try {
-    const parsed = JSON.parse(answer);
-    if (parsed && typeof parsed.answer === "string") text = parsed.answer;
+    parsed = JSON.parse(answer);
   } catch {
-    // The API may return plain text rather than a JSON-encoded answer.
+    // Plain-text answers are supported too.
   }
 
+  // Some providers wrap the structured response in an "answer" property.
+  if (parsed && typeof parsed === "object" && typeof parsed.answer === "string") {
+    try {
+      parsed = JSON.parse(parsed.answer);
+    } catch {
+      return <CitationText text={parsed.answer} />;
+    }
+  }
+
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const entries = Object.entries(parsed).filter(([, value]) =>
+      typeof value === "string" || (Array.isArray(value) && value.every((item) => typeof item === "string"))
+    );
+    if (entries.length > 0) {
+      return (
+        <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+          {entries.map(([key, value]) => {
+            const title = key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+            const isRelated = /graph|related|entities/i.test(key);
+            return (
+              <section key={key} style={{ border: "1px solid rgba(148,163,184,.18)", borderRadius: 10, padding: 14, background: "rgba(15,23,42,.22)" }}>
+                <h3 style={{ fontSize: 14, letterSpacing: ".04em", margin: "0 0 8px", color: "var(--foreground, #e5e7eb)" }}>{isRelated ? "Related graph entities" : title}</h3>
+                {Array.isArray(value) ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                    {value.map((item, index) => <span key={index} style={{ border: "1px solid rgba(148,163,184,.24)", borderRadius: 999, padding: "5px 9px", fontSize: 12 }}>{item}</span>)}
+                  </div>
+                ) : <CitationText text={String(value)} />}
+              </section>
+            );
+          })}
+        </div>
+      );
+    }
+  }
+
+  return <CitationText text={answer} />;
+}
+
+function CitationText({ text }: { text: string }) {
   const parts = text.split(/\[(VECTOR EVIDENCE\s+\d+(?:\s*,\s*VECTOR EVIDENCE\s+\d+)*)\]/g);
   return (
-    <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, marginTop: 12 }}>
+    <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, marginTop: 8 }}>
       {parts.map((part, index) => {
         if (index % 2 === 0) return <span key={index}>{part}</span>;
-        const citations = part.split(/,\s*/);
         return (
           <span key={index}>
-            {citations.map((citation, citationIndex) => {
+            {part.split(/,\s*/).map((citation, citationIndex) => {
               const match = citation.match(/^VECTOR EVIDENCE\s+(\d+)$/);
               if (!match) return <span key={citationIndex}>{citation}</span>;
               const evidenceNumber = Number(match[1]);
               return (
-                <a
-                  key={citationIndex}
-                  href={`#evidence-${evidenceNumber}`}
+                <a key={citationIndex} href={`#evidence-${evidenceNumber}`}
                   style={{ display: "inline-block", margin: "0 2px", color: "#5ee7c4", textDecoration: "underline", textUnderlineOffset: 3, fontWeight: 600 }}
-                  title={`Jump to retrieved evidence ${evidenceNumber}`}
-                >
+                  title={`Jump to retrieved evidence ${evidenceNumber}`}>
                   [Evidence {evidenceNumber}]
                 </a>
               );
