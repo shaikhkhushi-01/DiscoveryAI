@@ -25,10 +25,17 @@ class GeminiUpstreamError(RuntimeError):
         message: str = "Gemini service is temporarily unavailable",
     ):
         self.status_code = status_code
+        # HTTP 429 usually means a project/model quota or rate limit.
+        # Retrying immediately and switching models often consumes more quota.
         self.retryable = (
-            status_code in RETRYABLE_STATUS_CODES
+            (status_code in RETRYABLE_STATUS_CODES and status_code != 429)
             or status_code is None
         )
+        if status_code == 429 and message == "Gemini service is temporarily unavailable":
+            message = (
+                "Gemini rate limit or quota reached (HTTP 429). "
+                "Pause generation and resume later with --resume."
+            )
         super().__init__(message)
 
 
@@ -135,6 +142,13 @@ class GeminiProvider(LLMProvider):
                 )
 
                 status = response.status_code
+
+                if status == 429:
+                    logger.error(
+                        "Gemini rate limit or quota reached. "
+                        "Stopping retries to preserve quota."
+                    )
+                    raise GeminiUpstreamError(status)
 
                 if status in RETRYABLE_STATUS_CODES:
 
