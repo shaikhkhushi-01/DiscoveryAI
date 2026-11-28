@@ -116,7 +116,7 @@ async def test_generate_stops_immediately_on_http_429(monkeypatch):
     post = AsyncMock(return_value=mock_response(429))
 
     with (
-        patch("app.services.llm.gemini.asyncio.sleep", new_callable=AsyncMock) 
+        patch("app.services.llm.gemini.asyncio.sleep", new_callable=AsyncMock),
         patch("app.services.llm.gemini.httpx.AsyncClient") as client_class,
     ):
         client = AsyncMock()
