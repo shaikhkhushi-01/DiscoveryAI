@@ -220,7 +220,7 @@ async def test_generate_does_not_fallback_for_non_retryable_error(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_generate_raises_after_all_retries_fail(monkeypatch):
+async def test_generate_stops_after_quota_limit(monkeypatch):
     configure_settings(monkeypatch)
     provider = GeminiProvider()
     provider.max_attempts = 2
@@ -239,8 +239,8 @@ async def test_generate_raises_after_all_retries_fail(monkeypatch):
             await provider.generate("Test prompt")
 
     assert error.value.status_code == 429
-    assert error.value.retryable is True
-    assert post.await_count == 2
+    assert error.value.retryable is False
+    assert post.await_count == 1
 
 
 @pytest.mark.asyncio
