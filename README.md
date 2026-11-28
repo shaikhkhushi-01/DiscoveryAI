@@ -2,9 +2,31 @@
 
 **Evidence-grounded scientific discovery, research-gap analysis, and hypothesis planning.**
 
+[![DiscoveryAI CI](https://github.com/shaikhkhushi-01/DiscoveryAI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shaikhkhushi-01/DiscoveryAI/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-see%20repository-blue.svg)](LICENSE)
+[![Frontend](https://img.shields.io/badge/demo-live-16a085)](https://discovery-ai-swart.vercel.app/)
+[![API](https://img.shields.io/badge/API-docs-2563eb)](https://discoveryai-6dmk.onrender.com/docs)
+
+**Live application:** https://discovery-ai-swart.vercel.app/  
+**API documentation:** https://discoveryai-6dmk.onrender.com/docs  
+**Source code:** https://github.com/shaikhkhushi-01/DiscoveryAI
+
+> **Research prototype, not a validated scientific product.** The live demo demonstrates evidence retrieval and grounded answer generation over the currently indexed corpus. Research-gap novelty, expert agreement, and baseline superiority have not yet been established through completed independent expert evaluation.
+
+
 DiscoveryAI is a research-oriented platform that ingests scientific papers, extracts structured scientific information, indexes papers for hybrid retrieval, builds a knowledge graph, and generates evidence-bounded research-gap assessments and opportunity reports.
 
 > **Scientific integrity:** DiscoveryAI can identify opportunities not represented in a specified indexed corpus and search scope. It cannot prove that a topic has never been researched globally.
+
+## Quick tour
+
+1. Open the [live dashboard](https://discovery-ai-swart.vercel.app/).
+2. Try a scientific question that is covered by the currently indexed papers.
+3. Inspect the generated answer and follow its numbered evidence citations to the retrieved source passages.
+4. Review the [API documentation](https://discoveryai-6dmk.onrender.com/docs) for the backend interfaces.
+5. Read the [evaluation status](docs/submission/EVALUATION_STATUS.md) before interpreting any reported benchmark numbers.
+
+The public demo's indexed corpus may be small and can change as documents are added or re-indexed. A successful demo query is a functional demonstration, not evidence of broad scientific coverage.
 
 ## What the system does
 
