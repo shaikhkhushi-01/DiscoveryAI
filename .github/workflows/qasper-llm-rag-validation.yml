@@ -1,0 +1,96 @@
+name: QASPER LLM-RAG Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      top_k:
+        description: "Number of BM25 evidence paragraphs supplied to Gemini"
+        required: true
+        default: "5"
+        type: choice
+        options:
+          - "3"
+          - "5"
+          - "10"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qasper-llm-rag-validation
+  cancel-in-progress: false
+
+jobs:
+  qasper-llm-rag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      PYTHONPATH: backend
+      LLM_PROVIDER: gemini
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: gemini-3.5-flash-lite
+      GEMINI_FALLBACK_MODEL: gemini-3.6-flash
+      GEMINI_REQUEST_INTERVAL_SECONDS: "5"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install minimal LLM runtime
+        run: python -m pip install --upgrade pip pydantic-settings==2.7.1 httpx==0.28.1
+
+      - name: Verify Gemini secret is configured
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::Repository secret GEMINI_API_KEY is missing. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Prepare pinned QASPER v0.3.0 validation data
+        run: python scripts/benchmarks/prepare_qasper.py
+
+      - name: Generate complete validation LLM-RAG predictions
+        run: |
+          python scripts/benchmarks/generate_qasper_predictions.py \
+            --split validation \
+            --mode llm_rag \
+            --top-k "${{ inputs.top_k }}" \
+            --code-revision "$GITHUB_SHA" \
+            --resume
+
+      - name: Evaluate answer and evidence F1
+        if: success()
+        run: |
+          python scripts/benchmarks/evaluate_qasper.py \
+            --gold data/benchmarks/qasper/normalized/references/validation.jsonl \
+            --predictions data/benchmarks/qasper/predictions/validation.llm_rag.jsonl \
+            --output data/benchmarks/qasper/reports/validation.llm_rag.answer.json
+
+      - name: Evaluate retrieval metrics
+        if: success()
+        run: |
+          python scripts/benchmarks/evaluate_retrieval.py \
+            --gold data/benchmarks/qasper/normalized/references/validation.jsonl \
+            --chunks data/benchmarks/qasper/normalized/chunks/validation.jsonl \
+            --predictions data/benchmarks/qasper/predictions/validation.llm_rag.jsonl \
+            --output data/benchmarks/qasper/reports/validation.llm_rag.retrieval.json \
+            --k 5
+
+      - name: Upload predictions and reports (including partial output on failure)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: qasper-llm-rag-validation-${{ github.run_id }}
+          path: |
+            data/benchmarks/qasper/predictions/validation.llm_rag.jsonl
+            data/benchmarks/qasper/predictions/validation.llm_rag.jsonl.metadata.json
+            data/benchmarks/qasper/reports/validation.llm_rag.answer.json
+            data/benchmarks/qasper/reports/validation.llm_rag.retrieval.json
+            data/benchmarks/qasper/normalized/manifest.json
+          if-no-files-found: warn
+          retention-days: 30
