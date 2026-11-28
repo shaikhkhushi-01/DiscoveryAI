@@ -1,7 +1,18 @@
 # Scientific Evaluation Status
 
-**Status snapshot:** 2026-11-26  
+**Status snapshot:** 2026-11-28  
 **Purpose:** distinguish implemented evaluation tooling, completed public-benchmark measurements, preliminary experiments, and pending scientific validation.
+
+## 0. Live engineering smoke test (2026-11-28)
+
+The deployed public Explore workflow was manually exercised with the question: “What is the masked language modeling objective used in BERT, and how does it help the model learn bidirectional representations?”
+
+Observed result:
+- The API generated an answer from 8 retrieved evidence passages.
+- The answer cited the BERT paper's masked-language-modeling objective and bidirectional-context explanation.
+- Citation links navigated to the corresponding evidence passages in the page; the user confirmed that the passage scroll behavior worked.
+
+This is a single functional smoke test over the current indexed corpus. It is not a benchmark evaluation, does not establish answer accuracy across a representative question set, and does not validate research-gap novelty.
 
 ## 1. DiscoveryGapBench evaluation tooling
 
