@@ -1,119 +1,156 @@
 # DiscoveryAI
 
-**Evidence-grounded scientific discovery, research-gap analysis, and hypothesis planning.**
+**Evidence-grounded scientific research discovery**
 
-[![DiscoveryAI CI](https://github.com/shaikhkhushi-01/DiscoveryAI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shaikhkhushi-01/DiscoveryAI/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-see%20repository-blue.svg)](LICENSE)
-[![Frontend](https://img.shields.io/badge/demo-live-16a085)](https://discovery-ai-swart.vercel.app/)
-[![API](https://img.shields.io/badge/API-docs-2563eb)](https://discoveryai-6dmk.onrender.com/docs)
+DiscoveryAI is a research prototype for exploring scientific literature beyond keyword search. It combines scientific document extraction, hybrid retrieval, a knowledge graph, evidence-linked answers, candidate research-gap analysis, and hypothesis/experiment planning within a defined indexed corpus.
 
-**Live application:** https://discovery-ai-swart.vercel.app/  
-**API documentation:** https://discoveryai-6dmk.onrender.com/docs  
-**Source code:** https://github.com/shaikhkhushi-01/DiscoveryAI
+[![CI](https://github.com/shaikhkhushi-01/DiscoveryAI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shaikhkhushi-01/DiscoveryAI/actions/workflows/ci.yml)
+[![Frontend](https://img.shields.io/badge/live%20demo-open-14b8a6)](https://discovery-ai-swart.vercel.app/)
+[![API](https://img.shields.io/badge/API-Swagger-2563eb)](https://discoveryai-6dmk.onrender.com/docs)
+[![Python](https://img.shields.io/badge/Python-3.12-3776ab)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
 
-> **Research prototype, not a validated scientific product.** The live demo demonstrates evidence retrieval and grounded answer generation over the currently indexed corpus. Research-gap novelty, expert agreement, and baseline superiority have not yet been established through completed independent expert evaluation.
+| Resource | Link |
+|---|---|
+| Live application | [discovery-ai-swart.vercel.app](https://discovery-ai-swart.vercel.app/) |
+| Interactive API docs | [discoveryai-6dmk.onrender.com/docs](https://discoveryai-6dmk.onrender.com/docs) |
+| Source repository | [github.com/shaikhkhushi-01/DiscoveryAI](https://github.com/shaikhkhushi-01/DiscoveryAI) |
+| Evaluation status | [Scientific evaluation report](docs/submission/EVALUATION_STATUS.md) |
 
+> **Research integrity.** DiscoveryAI is an advanced research prototype, not a scientifically validated product. The live Explore workflow has been manually verified for an evidence-grounded BERT question. Research-gap novelty, expert agreement, and baseline superiority have not yet been established through a completed independent evaluation.
 
-DiscoveryAI is a research-oriented platform that ingests scientific papers, extracts structured scientific information, indexes papers for hybrid retrieval, builds a knowledge graph, and generates evidence-bounded research-gap assessments and opportunity reports.
+## At a glance
 
-> **Scientific integrity:** DiscoveryAI can identify opportunities not represented in a specified indexed corpus and search scope. It cannot prove that a topic has never been researched globally.
+DiscoveryAI is designed around one research question:
 
-## Quick tour
+> Given a research question and a bounded scientific corpus, can a system identify candidate research opportunities, support or challenge them with traceable evidence, communicate uncertainty, and propose testable experiments?
 
-1. Open the [live dashboard](https://discovery-ai-swart.vercel.app/).
-2. Try a scientific question that is covered by the currently indexed papers.
-3. Inspect the generated answer and follow its numbered evidence citations to the retrieved source passages.
-4. Review the [API documentation](https://discoveryai-6dmk.onrender.com/docs) for the backend interfaces.
-5. Read the [evaluation status](docs/submission/EVALUATION_STATUS.md) before interpreting any reported benchmark numbers.
+The system is deliberately corpus-bounded. It can identify opportunities not represented in a named indexed corpus and search scope; it cannot prove that a topic has never been researched anywhere.
 
-The public demo's indexed corpus may be small and can change as documents are added or re-indexed. A successful demo query is a functional demonstration, not evidence of broad scientific coverage.
+## Try the live demo
 
-## Verified live demo journey
+1. Open the [DiscoveryAI dashboard](https://discovery-ai-swart.vercel.app/).
+2. Go to **Explore**.
+3. Ask:
 
-On 2026-11-28, the deployed Explore flow was manually checked with a BERT masked-language-modeling question. The API returned an answer grounded in eight retrieved evidence passages; citation links opened the corresponding evidence passages and scrolled to the correct locations in the page.
+   `What is the masked language modeling objective used in BERT, and how does it help the model learn bidirectional representations?`
 
-This verifies that specific question-answering and evidence-navigation journey against the currently indexed corpus. It is not a benchmark score, a broad-coverage claim, or validation of research-gap novelty.
+4. Inspect the generated answer and its numbered citations.
+5. Select an evidence citation to jump to the corresponding retrieved passage.
 
-## What the system does
+**Verified demo journey (28 November 2026):** the deployed Explore flow returned an answer grounded in eight retrieved evidence passages from the BERT paper. Citation links navigated to the corresponding passages in the page. This is a functional smoke test of one question over the current indexed corpus—not a benchmark score, broad-coverage claim, or validation of research-gap novelty.
 
-1. **Document intelligence** — PDF validation, parsing, metadata normalization, scientific extraction, and indexing.
-2. **Hybrid scientific retrieval** — vector retrieval, knowledge-graph retrieval, fusion, and reranking.
-3. **Evidence-grounded reasoning** — source-linked claims, supporting/contradictory evidence, and evidence validation.
-4. **Research intelligence** — paper comparison, literature-review synthesis, temporal trends, and candidate-gap detection.
-5. **Research Critic** — challenges candidate gaps against retrieved literature and returns a bounded verdict.
-6. **Opportunity reports** — synthesizes evidence, limitations, research directions, hypotheses, and experiment plans.
-7. **Evaluation tooling** — benchmark schema, adjudicated-gold evaluator, baseline comparison, ablation analysis, and dual-annotator agreement tooling.
+The public corpus is intentionally small and may change as papers are added or re-indexed.
+
+## Core capabilities
+
+| Capability | What it does |
+|---|---|
+| Scientific document ingestion | Accepts PDFs, extracts text and metadata, and prepares papers for indexing. |
+| Structured scientific extraction | Identifies scientific concepts and structured information from paper content. |
+| Hybrid retrieval | Combines semantic/vector, lexical, and graph-based retrieval with evidence fusion and reranking. |
+| Evidence-grounded answers | Generates answers from retrieved passages and links claims to source evidence. |
+| Scientific knowledge graph | Represents papers and extracted scientific entities/relationships. |
+| Research-gap analysis | Produces candidate opportunities and checks them against evidence within the indexed corpus. |
+| Research Critic | Challenges candidate claims and distinguishes supported, contradicted, and uncertain cases. |
+| Research planning | Generates hypotheses and proposed experiment plans with datasets, baselines, and metrics. |
+| Evaluation framework | Provides benchmark schemas, baseline/ablation runners, and expert-agreement analysis tooling. |
 
 ## Architecture
 
-```text
-Next.js dashboard
-       |
-       v
-FastAPI application ---- Authentication / API validation
-       |
-       +---- PDF ingestion and scientific extraction
-       |
-       +---- Hybrid retrieval ---- Qdrant (vectors)
-       |                      \--- Neo4j (knowledge graph)
-       |
-       +---- PostgreSQL (users, papers, documents, jobs, metadata)
-       |
-       +---- Gemini / configured LLM provider
-       |
-       +---- Evidence validation -> Gap detection -> Research Critic
-       |                                              |
-       +---- Temporal trends / synthesis              v
-                                          Opportunity report
-                                          Hypothesis + experiments
-
-Offline evaluation:
-DiscoveryGapBench -> predictions -> evaluator -> baselines/ablations
-                  -> dual-reviewer agreement -> adjudication
+```mermaid
+flowchart TD
+    R[Researcher] --> UI[Next.js 15 / React 19]
+    UI --> API[FastAPI]
+    API --> ING[PDF ingestion and scientific extraction]
+    ING --> PG[(PostgreSQL)]
+    ING --> JOB[Indexing jobs]
+    JOB --> WORKER[Background indexing worker]
+    WORKER --> Q[(Qdrant vector index)]
+    WORKER --> N[(Neo4j knowledge graph)]
+    API --> RET[Hybrid retrieval and reranking]
+    RET --> Q
+    RET --> N
+    RET --> EVID[Evidence-grounded answer]
+    RET --> GAP[Candidate research gaps]
+    GAP --> CRITIC[Evidence validation and Research Critic]
+    CRITIC --> PLAN[Hypotheses and experiment plans]
+    PG --> API
+    LLM[Gemini / configured LLM provider] --> ING
+    LLM --> EVID
+    LLM --> CRITIC
 ```
+
+### Request lifecycle
+
+1. A researcher submits a paper through the authenticated document API.
+2. The ingestion pipeline validates and parses the PDF, extracts metadata and scientific content, and persists document records.
+3. An indexing job generates embeddings and writes chunk vectors to Qdrant; extracted entities and relationships are written to Neo4j.
+4. A research query retrieves candidate passages through semantic, lexical, and graph paths.
+5. Evidence fusion and reranking select source passages for answer generation or downstream research analysis.
+6. Candidate research gaps are treated as hypotheses to investigate—not as proof of global novelty.
+7. Hypotheses and experiment plans are proposals until researchers execute and evaluate them.
 
 ## Technology
 
-| Layer | Technology |
+| Layer | Stack |
 |---|---|
 | Frontend | Next.js 15, React 19, TypeScript |
-| API | Python 3.12, FastAPI, Pydantic |
-| Relational data | PostgreSQL, SQLAlchemy, Alembic |
-| Vector search | Qdrant |
+| Backend | Python 3.12, FastAPI, Pydantic |
+| Relational database | PostgreSQL, SQLAlchemy, Alembic |
+| Vector database | Qdrant |
 | Knowledge graph | Neo4j |
-| Background/runtime support | Redis, FastAPI background tasks / worker |
-| LLM | Gemini provider, with provider abstractions for other configured backends |
-| Document processing | PyMuPDF |
-| Deployment | Vercel frontend, Render backend (current public deployment configuration), Docker Compose for local stack |
-| Quality | pytest, TypeScript/Next production build, GitHub Actions |
+| Background/runtime support | Redis and indexing worker |
+| LLM / embeddings | Gemini provider and configurable provider abstractions |
+| PDF processing | PyMuPDF |
+| Quality checks | pytest, TypeScript type-check, Next.js production build, GitHub Actions |
+| Deployment | Vercel frontend, Render API; Docker Compose for local development |
 
-## Repository map
+## Repository structure
 
-- `backend/app/api/` — HTTP routes and request schemas.
-- `backend/app/services/` — ingestion, extraction, retrieval, graph, evidence, gap detection, synthesis, agents, and evaluation services.
-- `backend/app/models/` and `backend/alembic/` — persistence models and database migrations.
-- `backend/app/tests/` and `backend/tests/` — unit and regression tests.
-- `frontend/` — Next.js dashboard.
-- `data/evaluation/` — benchmark schemas and starter templates; starter templates are not gold data.
-- `research/` — research design, annotation rubrics, protocols, and release gates.
-- `scripts/evaluation/` — benchmark, baseline, ablation, expert-agreement, and release-check CLIs.
-- `docker-compose.yml` — local six-service development stack.
+```text
+backend/
+  app/api/           FastAPI routes and request schemas
+  app/services/      ingestion, extraction, retrieval, graph, reasoning
+  app/models/        persistence models
+  app/tests/         backend unit and regression tests
+  alembic/           database migrations
+frontend/            Next.js application
+data/evaluation/     benchmark schemas and starter templates
+research/            research protocols, rubrics, and release gates
+scripts/benchmarks/  QASPER preparation and evaluation utilities
+scripts/evaluation/  benchmark, baseline, ablation, and agreement tools
+docs/submission/     project report, architecture, evaluation, demo
+.github/workflows/   CI and scheduled research/indexing workflows
+docker-compose.yml   local multi-service development stack
+```
 
-## Local development
+## Run locally
 
 ### Prerequisites
 
 - Python 3.12
-- Node.js 20 and npm
+- Node.js 20+ and npm
 - Docker Engine with Docker Compose
-- Provider credentials for live LLM calls
-- Sufficient disk/RAM for the selected embedding model and paper corpus
+- Provider credentials for live LLM/embedding operations
 
 ### 1. Configure environment
 
-Copy `.env.example` to `.env` and replace all development placeholders where appropriate. Never commit real API keys, database credentials, JWT secrets, or reviewer identities.
+From the repository root, copy `.env.example` to `.env` and fill in the required local values. The frontend uses `frontend/.env.local.example` as its template:
 
-For a production deployment, use `.env.production.example` as a variable checklist. Generate strong, unique secrets and configure explicit frontend origins.
+**macOS / Linux**
+```bash
+cp .env.example .env
+cp frontend/.env.local.example frontend/.env.local
+```
+
+**Windows PowerShell**
+```powershell
+Copy-Item .env.example .env
+Copy-Item frontend/.env.local.example frontend/.env.local
+```
+
+Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `frontend/.env.local` for local API access. Never commit real API keys, database credentials, JWT secrets, or private research documents.
 
 ### 2. Start infrastructure
 
@@ -126,14 +163,29 @@ docker compose up -d postgres neo4j qdrant redis
 ```bash
 cd backend
 python -m venv .venv
-# Windows: .venv\\Scripts\\activate
+```
+
+Activate the environment:
+
+**macOS / Linux**
+```bash
 source .venv/bin/activate
+```
+
+**Windows PowerShell**
+```powershell
+.venv\\Scripts\\Activate.ps1
+```
+
+Install dependencies, apply migrations, and start the API:
+
+```bash
 pip install -r requirements.txt
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-The API is available at `http://localhost:8000`; interactive API documentation is at `http://localhost:8000/docs`.
+The API is available at [localhost:8000](http://localhost:8000); interactive documentation is at [localhost:8000/docs](http://localhost:8000/docs).
 
 ### 4. Start the frontend
 
@@ -142,148 +194,118 @@ In a second terminal:
 ```bash
 cd frontend
 npm install
-cp .env.local.example .env.local
 npm run dev
 ```
 
-The dashboard is available at `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `frontend/.env.local` for local API access.
+The dashboard is available at [localhost:3000](http://localhost:3000).
 
-### 5. Or start the complete Compose stack
+### 5. Or use Docker Compose
+
+From the repository root:
 
 ```bash
 docker compose up --build
 ```
 
-The Compose file starts PostgreSQL, Neo4j, Qdrant, Redis, the API, and the frontend. Review the development-only default credentials before exposing any service beyond localhost.
+Review the development-only default credentials in the Compose configuration before exposing any service beyond localhost.
 
 ## API entry points
 
-- `GET /health` and `GET /api/v1/health` — process/API health.
-- `GET /api/v1/public/overview`, `/gaps`, and `/trends` — public dashboard data.
-- `POST /api/v1/public/graph-rag/retrieve` — public read-only retrieval surface.
-- `POST /api/v1/public/graph-rag/ask` — public evidence-grounded question answering with retrieved source passages and graph context.
-- `POST /api/v1/documents/upload` — authenticated PDF ingestion.
-- `POST /api/v1/documents/{id}/index` — authenticated indexing.
-- `GET /api/v1/diagnostics/qdrant-health` — authenticated Qdrant diagnostic.
-- `/api/v1/gaps` — candidate gaps, critic, and opportunity reports (authenticated).
-- `/api/v1/intelligence` — hypotheses, comparison, and literature review (authenticated).
-- `/api/v1/agents` — discovery workflow (authenticated).
+| Endpoint | Purpose | Access |
+|---|---|---|
+| `GET /health` | API process health | Public |
+| `GET /api/v1/health` | API health route | Public |
+| `GET /api/v1/public/overview` | Public dashboard overview | Public |
+| `GET /api/v1/public/gaps` | Public candidate-gap view | Public |
+| `GET /api/v1/public/trends` | Public trends view | Public |
+| `POST /api/v1/public/graph-rag/retrieve` | Evidence retrieval | Public |
+| `POST /api/v1/public/graph-rag/ask` | Evidence-grounded question answering | Public |
+| `POST /api/v1/documents/upload` | PDF ingestion | Authenticated |
+| `POST /api/v1/documents/{id}/index` | Document indexing | Authenticated |
+| `/api/v1/gaps` | Candidate gaps and critic workflows | Authenticated |
+| `/api/v1/intelligence` | Hypotheses, comparison, and literature review | Authenticated |
+| `/api/v1/agents` | Discovery workflows | Authenticated |
 
-The deployed API's OpenAPI page is the source of truth for the exact current request and response schemas.
+The deployed [OpenAPI documentation](https://discoveryai-6dmk.onrender.com/docs) is the source of truth for current request and response schemas.
 
-## Scientific evaluation
+## Engineering quality
 
-The evaluation framework is intentionally separate from the live product path.
+The GitHub Actions pipeline checks:
 
-### Benchmark and annotation
+- Python source compilation.
+- Backend unit and regression tests.
+- Frontend TypeScript type-check and production build.
+- Repository foundation and release-readiness checks.
+- Docker Compose configuration validity.
 
-- Schema: `data/evaluation/discovery_gap_bench.schema.json`
-- Annotation rubric: `research/discovery_gap_bench_annotation_rubric.md`
-- Protocols: `research/phase4_*_protocol.md`
-- Expert annotation instructions: `research/phase4_expert_validation_protocol.md`
+Run the core checks locally:
 
-Validate a benchmark:
-
+**Backend** (from `backend/`):
 ```bash
-python scripts/evaluation/validate_discovery_gap_bench.py path/to/benchmark.json
+pip install -r requirements.txt pytest pytest-asyncio
+PYTHONPATH=. pytest app/tests tests ../tests -q
+python -m compileall app
 ```
 
-Run an adjudicated benchmark split:
-
+**Frontend** (from `frontend/`):
 ```bash
-python scripts/evaluation/run_discovery_gap_bench.py \
-  --benchmark path/to/benchmark.json \
-  --predictions path/to/predictions.json \
-  --split test \
-  --output reports/evaluation/discoveryai-test.json
+npm install
+npm run typecheck
+npm run build
 ```
 
-Compare the five baseline systems:
-
-```bash
-python scripts/evaluation/compare_discovery_gap_baselines.py --help
-```
-
-Run component ablations:
-
-```bash
-python scripts/evaluation/run_discovery_gap_ablations.py --help
-```
-
-Analyze independent reviewer agreement:
-
-```bash
-python scripts/evaluation/analyze_expert_agreement.py \
-  --annotator-a data/evaluation/annotations/reviewer-a.json \
-  --annotator-b data/evaluation/annotations/reviewer-b.json \
-  --output reports/evaluation/expert-agreement.json
-```
-
-Do not score the starter templates as if they were reviewed gold data. Do not publish benchmark scores, baseline superiority, or global-novelty claims until real expert annotations, adjudication, frozen corpus snapshots, and reproducible runs exist.
-
-## Engineering checks
-
-From the repository root:
-
+**Repository release check** (from the root):
 ```bash
 python scripts/evaluation/release_check.py
 ```
 
-Backend tests (run from `backend/`):
+## Scientific evaluation and limitations
 
-```bash
-pip install -r requirements.txt pytest pytest-asyncio
-PYTHONPATH=. pytest app/tests tests -q
-python -m compileall app
-```
+DiscoveryAI includes tooling for a future controlled evaluation, but the existence of an evaluator does not mean the system has passed the evaluation.
 
-Frontend production build (run from `frontend/`):
+Implemented evaluation tooling includes:
+- A versioned DiscoveryGapBench schema and annotation rubric.
+- A benchmark validator and adjudicated-gold evaluation runner.
+- Five-system baseline comparison and component ablation runners.
+- Dual-reviewer agreement analysis and reproducibility metadata.
 
-```bash
-npm install
-npm run build
-```
+Still pending:
+- A frozen, clearly scoped corpus snapshot for the benchmark.
+- Independent expert annotations and adjudication.
+- Complete prediction artifacts for all baselines and ablations.
+- Measured performance, expert agreement, and held-out error analysis.
 
-CI runs backend compilation/tests, frontend production build, repository release checks, and Docker Compose configuration validation.
+Do not interpret starter templates or weak labels as expert gold data. Do not report benchmark performance, baseline superiority, or global-novelty claims until the evaluation protocol has been completed.
 
-## Deployment notes
+See [Evaluation Status](docs/submission/EVALUATION_STATUS.md), [Project Report](docs/submission/PROJECT_REPORT.md), and [Architecture](docs/submission/ARCHITECTURE.md) for detail.
 
-Current deployment configuration:
+## Deployment
 
-- Frontend: `https://discovery-ai-swart.vercel.app/`
-- Backend: `https://discoveryai-6dmk.onrender.com/`
-- API docs: `https://discoveryai-6dmk.onrender.com/docs`
+- Frontend: [discovery-ai-swart.vercel.app](https://discovery-ai-swart.vercel.app/)
+- Backend: [discoveryai-6dmk.onrender.com](https://discoveryai-6dmk.onrender.com/)
+- API docs: [Swagger UI](https://discoveryai-6dmk.onrender.com/docs)
 
-Set `NEXT_PUBLIC_API_URL` in the frontend deployment to the backend origin. Set `CORS_ORIGINS` on the backend to the exact frontend origin(s). Configure PostgreSQL, Neo4j, Qdrant, Redis, LLM credentials, JWT secret, and all production secrets in the hosting provider's secret manager. Never put backend secrets in frontend variables.
+A successful health response confirms that the API process responds; it does not establish that PostgreSQL, Qdrant, Neo4j, Redis, the LLM provider, or every protected workflow is healthy. Validate dependencies and user journeys independently.
 
-A successful `/health` response proves that the API process responds; it does **not** prove that every database, vector index, graph query, LLM provider, or protected workflow is healthy. Validate each dependency and user journey separately.
+## Research integrity
 
-## Current completion status
-
-**Engineering:** the planned core product capabilities and Phase 4 evaluation tooling (benchmark specification, runner, baseline harness, ablation harness, and expert-agreement analysis) are implemented in the repository.
-
-**Scientific validation:** still pending. The repository does not yet contain a populated, independently annotated and adjudicated benchmark with reported baseline/ablation results. Expert agreement and performance must be measured from real reviewer annotations and controlled prediction artifacts.
-
-**Release status:** treat the project as an advanced research prototype until the engineering release checklist and scientific evaluation gate in `research/mbzuai_level_quality_gates.md` are satisfied.
-
-## Research integrity commitments
-
-- Scope every novelty statement to a named corpus snapshot and search protocol.
-- Preserve provenance from claim to paper, document, and chunk.
-- Include contradictory evidence and report uncertainty.
-- Keep raw annotations, adjudication, and test labels separate.
-- Record model/provider, prompt, embedding, retrieval configuration, code revision, corpus, benchmark, split, and random seed for every run.
+- Scope novelty statements to a named corpus snapshot and search protocol.
+- Preserve provenance from generated claims to papers, documents, and chunks.
+- Surface contradictory evidence and uncertainty.
+- Keep raw annotations, adjudication, and held-out test labels separate.
+- Record model/provider, prompt, embedding and retrieval configuration, code revision, corpus version, split, and random seed for each evaluation run.
 - Report negative results and limitations; do not tune on the held-out test set.
 
+## Project documents
 
-## Submission package
+- [Project report draft](docs/submission/PROJECT_REPORT.md)
+- [Architecture and data flow](docs/submission/ARCHITECTURE.md)
+- [Scientific evaluation status](docs/submission/EVALUATION_STATUS.md)
+- [Presentation outline](docs/submission/PRESENTATION_OUTLINE.md)
+- [Demo script](docs/submission/DEMO_SCRIPT.md)
 
-The current submission materials are maintained in [`docs/submission/`](docs/submission/):
+These materials describe the current implementation and planned evaluation. They are not a substitute for completed empirical validation.
 
-- [Project report draft](docs/submission/PROJECT_REPORT.md) — abstract, problem, objectives, related-work context, methodology, architecture, evaluation plan, limitations, and conclusion.
-- [Architecture and data flow](docs/submission/ARCHITECTURE.md) — Mermaid system diagram and workflow descriptions.
-- [Scientific evaluation status](docs/submission/EVALUATION_STATUS.md) — implemented tooling versus pending empirical evidence.
-- [Presentation outline](docs/submission/PRESENTATION_OUTLINE.md) — 10-slide structure and integrity rules.
-- [Demo script](docs/submission/DEMO_SCRIPT.md) — 7–9 minute walkthrough using verified live data.
+## License
 
-These are submission drafts. Complete empirical results, a populated expert-adjudicated benchmark, and verified production end-to-end evidence must be added before describing the project as scientifically validated or fully production-ready.
+No license has been declared in this repository. All rights are reserved by default; contact the repository owner before reusing or redistributing the code.
