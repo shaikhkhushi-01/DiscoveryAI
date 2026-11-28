@@ -108,30 +108,29 @@ async def test_generate_returns_candidate_text(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_generate_retries_http_429(monkeypatch):
-    configure_settings(monkeypatch)
+async def test_generate_stops_immediately_on_http_429(monkeypatch):
+    configure_settings(monkeypatch, fallback="test-fallback")
     provider = GeminiProvider()
-    provider.max_attempts = 2
+    provider.max_attempts = 4
 
-    responses = [
-        mock_response(429, headers={"Retry-After": "0"}),
-        mock_response(200),
-    ]
-
-    post = AsyncMock(side_effect=responses)
+    post = AsyncMock(return_value=mock_response(429))
 
     with (
-        patch("app.services.llm.gemini.asyncio.sleep", new_callable=AsyncMock),
+        patch("app.services.llm.gemini.asyncio.sleep", new_callable=AsyncMock) as sleep_mock,
         patch("app.services.llm.gemini.httpx.AsyncClient") as client_class,
     ):
         client = AsyncMock()
         client.post = post
         client_class.return_value.__aenter__.return_value = client
 
-        result = await provider.generate("Test prompt")
+        with pytest.raises(GeminiUpstreamError) as error:
+            await provider.generate("Test prompt")
 
-    assert result == '{"answer": "test response"}'
-    assert post.await_count == 2
+    assert error.value.status_code == 429
+    assert error.value.retryable is False
+    assert "quota" in str(error.value).lower()
+    assert post.await_count == 1
+    sleep_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
