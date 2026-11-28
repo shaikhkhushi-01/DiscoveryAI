@@ -63,7 +63,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Cache local embedding model
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cache/huggingface
           key: ${{ runner.os }}-minilm-l6-v2-v1
