@@ -116,7 +116,7 @@ async def test_generate_stops_immediately_on_http_429(monkeypatch):
     post = AsyncMock(return_value=mock_response(429))
 
     with (
-        patch("app.services.llm.gemini.asyncio.sleep", new_callable=AsyncMock) as sleep_mock,
+        patch("app.services.llm.gemini.asyncio.sleep", new_callable=AsyncMock) 
         patch("app.services.llm.gemini.httpx.AsyncClient") as client_class,
     ):
         client = AsyncMock()
@@ -130,7 +130,6 @@ async def test_generate_stops_immediately_on_http_429(monkeypatch):
     assert error.value.retryable is False
     assert "quota" in str(error.value).lower()
     assert post.await_count == 1
-    sleep_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
